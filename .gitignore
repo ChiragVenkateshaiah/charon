@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Distribution / packaging
+build/
+dist/
+*.egg
+
+# Environment / secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Model weights and caches — never commit model artifacts
+*.gguf
+*.safetensors
+*.bin
+models/
+.cache/
+huggingface_cache/
+.ollama/
+
+# Logs
+*.log
+
+# NOTE: benchmarks/results/ is deliberately NOT ignored.
+# Committed benchmark results are the project's actual deliverable — see
+# adr/0001-measurement-discipline.md. Do not add a blanket ignore for
+# benchmarks/ or benchmarks/results/ here.
