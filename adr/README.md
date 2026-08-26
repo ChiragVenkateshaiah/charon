@@ -62,3 +62,4 @@ directory:
 |-----|-------|--------|
 | [0000](0000-adr-template.md) | Template | — |
 | [0001](0001-measurement-discipline.md) | Every phase must produce a measured number | Accepted |
+| [0002](0002-single-cloud-gcp.md) | Charon runs single-cloud on Google Cloud | Accepted |
