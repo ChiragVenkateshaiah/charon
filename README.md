@@ -16,9 +16,10 @@ is listed as a feature until it has been built and measured.
 
 ## Where this started
 
-The project exists because of a five-minute Slack reply from a local CPU-only LLM in a
-production bot. The full writeup — what's actually known, what's assumed, and the open
-question that's still unresolved — is in
+The project exists because of a 20-to-30-minute Slack reply from a local CPU-only LLM in
+a production bot (a wall time recalled after the fact, not logged). The full writeup —
+what's actually known, what's assumed, and the open question that's still unresolved — is
+in
 [`docs/incident-000-cpu-inference.md`](docs/incident-000-cpu-inference.md). It is a
 motivating observation, not a benchmark; it's uncontrolled and not comparable to
 anything measured later on the actual GPU. The first controlled number in this repo

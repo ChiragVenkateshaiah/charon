@@ -34,13 +34,13 @@ Phase 1 started: not yet
     TPOT, end-to-end latency, output tok/s, GPU util, VRAM). Estimate GPU-hours
     and keep it to a single 3–4 hour block.
 - **Open questions / blockers:**
-  - `docs/incident-000-cpu-inference.md` leaves a gap open: memory bandwidth
-    explains only ~1/3 of the observed 5-minute CPU reply; prefill on a long
-    system prompt, thermal throttling, swapping, and iGPU bus contention are
-    unranked suspects. The Week 1 controlled CPU baseline (on the GCP instance's
-    own CPU) is the first step toward closing it.
-  - incident-000 TODOs: confirm the exact Ollama model tag and the laptop's
-    memory-channel configuration, if that machine is still available.
+  - `docs/incident-000-cpu-inference.md` still leaves one gap open: decode
+    bandwidth explains only a fraction of the recalled 20–30 min CPU reply;
+    prefill on a long system prompt, thermal throttling, swapping, and iGPU bus
+    contention are unranked suspects. Not chased directly — the machine was an
+    office laptop and is unrecoverable (model tag and memory config both closed
+    as unrecoverable in the doc). The Week 1 controlled CPU baseline, on the GCP
+    instance's own CPU, is what addresses it.
 - **Budget:** ₹1,000/month, ~36–40 GPU-hours (working estimate). Spent this
   month: 0h (hand-tracked). Nothing measured yet.
 - **Last session:** —
