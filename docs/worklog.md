@@ -22,14 +22,19 @@ Phase 1 started: not yet
   `docs/phase-1-plan.md`. Hardware decision is already settled: no local GPU, so
   every week runs on a `g2-standard-4` spot instance batched into 3–4 hour
   measurement sessions.
-- **In progress:** nothing. Scaffolding only — repo structure, docs, session
-  scripts, ADR-0001/0002.
+- **In progress:** Week 1 setup. Model chosen (see Decisions); server not written yet.
+- **Decisions:**
+  - **Week 1 model: `Qwen/Qwen2.5-1.5B-Instruct`.** Apache 2.0, plain instruct
+    (no thinking mode to control for), same-generation path to
+    `Qwen2.5-7B-Instruct` for the Week 6 scale-up so the tables stay comparable.
+    Reversible benchmark input, not an ADR-level choice; full rationale to go in
+    `benchmarks/methodology.md` in Week 2.
+  - Pinned revision: `989aa7980e4cf806f80c7fef2b1adb7bc71aa306` (HF `main` as of
+    2026-08-27, via the HF API — confirm it resolves to this on first download).
 - **Next actions:**
-  - Choose the Week 1 model: one 1–3B open-weights instruct model. Pin its
-    revision hash.
   - Write the naive server in `serving/` — plain `transformers` behind a minimal
-    FastAPI endpoint, one request at a time, no batching. Develop and smoke-test
-    locally on CPU.
+    FastAPI endpoint, one request at a time, no batching, loading the pinned
+    revision above. Develop and smoke-test locally on CPU.
   - Scope the first measurement session: Week 1 metrics at concurrency 1 (TTFT,
     TPOT, end-to-end latency, output tok/s, GPU util, VRAM). Estimate GPU-hours
     and keep it to a single 3–4 hour block.
