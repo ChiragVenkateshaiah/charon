@@ -7,10 +7,31 @@ requires-python = ">=3.11"
 authors = [
   { name = "Chirag", email = "chiragvenkateshaiah95@gmail.com" },
 ]
-# Dependencies are deliberately empty. Each phase adds what it needs when the
+# Runtime dependencies stay empty. Each phase adds what it needs when the
 # corresponding implementation decision is made (see CLAUDE.md — no tooling
-# additions ahead of a decision).
+# additions ahead of a decision). Per-phase work lives in dependency groups
+# below, not here.
 dependencies = []
+
+[dependency-groups]
+# Week 1 naive serving baseline — serving/naive_server.py. Added per the Week 1
+# implementation decision recorded in docs/worklog.md. Lower bounds only; the
+# lockfile pins exact builds. CLAUDE.md's version-drift rule applies whenever
+# this list is revisited — transformers in particular renames generation and
+# from_pretrained kwargs across minor versions.
+serving = [
+  "torch>=2.4",
+  "transformers>=4.45",
+  "accelerate>=0.34",
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic>=2.7",
+]
+
+[tool.uv]
+# Charon is an application, not a library — don't build or install the repo
+# itself into the environment; just resolve the dependency groups above.
+package = false
 
 [build-system]
 requires = ["setuptools>=68"]
