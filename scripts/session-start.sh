@@ -21,10 +21,17 @@ INSTANCE_NAME="${CHARON_INSTANCE_NAME:-charon-gpu}"
 MACHINE_TYPE="g2-standard-4"
 ACCELERATOR="type=nvidia-l4,count=1"
 
-# Primary region per project decision; fallback used only if spot capacity is
+# Primary zone per project decision; fallback used only if spot capacity is
 # unavailable in the primary zone at request time.
-PRIMARY_ZONE="${CHARON_PRIMARY_ZONE:-asia-south1-a}"
-FALLBACK_ZONE="${CHARON_FALLBACK_ZONE:-us-central1-a}"
+#
+# us-central1 is primary, not asia-south1: the preemptible-CPU quota in
+# asia-south1 was not adjustable for this project as of 2026-08-28 (project age
+# or regional capacity — "you cannot adjust this quota" in the console), so a
+# spot g2-standard-4 cannot be created there. asia-south1-a is kept as the
+# fallback in case that quota opens up later. See docs/gcp-setup.md and the
+# ADR-0002 follow-ups.
+PRIMARY_ZONE="${CHARON_PRIMARY_ZONE:-us-central1-a}"
+FALLBACK_ZONE="${CHARON_FALLBACK_ZONE:-asia-south1-a}"
 
 IMAGE_FAMILY="${CHARON_IMAGE_FAMILY:-common-cu124}"
 IMAGE_PROJECT="${CHARON_IMAGE_PROJECT:-deeplearning-platform-release}"

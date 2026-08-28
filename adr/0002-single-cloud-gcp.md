@@ -138,8 +138,14 @@ case is re-running Phase 1's measurements on different hardware.
 
 - [ ] GCP billing budget alert configured — blocking before the first real
       `scripts/session-start.sh` run (in progress)
-- [ ] Confirm `g2-standard-4` spot capacity in `asia-south1`; the `us-central1`
-      fallback is already wired into `scripts/session-start.sh` if it's unavailable
+- [x] Confirm `g2-standard-4` spot capacity in `asia-south1` — **not usable as of
+      2026-08-28.** The preemptible-CPU quota in `asia-south1` is not adjustable for
+      this project (console: "you cannot adjust this quota"; likely project age or
+      regional capacity), so a spot `g2-standard-4` cannot be created there.
+      `us-central1` was promoted to primary zone in `scripts/session-start.sh`;
+      `asia-south1-a` stays as the fallback in case the quota opens up later. This
+      does not change the single-cloud decision — both zones are GCP. See
+      `docs/gcp-setup.md`. Revisit if `asia-south1` quota becomes adjustable.
 - [ ] Revisit trigger: none anticipated within this project's scope. Would only
       revisit if GCP spot L4 pricing or capacity changed materially enough to threaten
       the ₹1,000/month budget.

@@ -64,7 +64,9 @@ established payer.
 ### What `session-start.sh` needs
 
 The script creates one spot `g2-standard-4` (4 vCPU) + 1× NVIDIA L4 in
-`asia-south1-a`, falling back to `us-central1-a` if spot capacity is unavailable.
+`us-central1-a`, falling back to `asia-south1-a` if spot capacity is unavailable.
+(`us-central1` is primary because `asia-south1` quota could not be raised — see
+[the adjustability finding](#adjustability-asia-south1-blocked) below.)
 GCP checks **four** quotas and **all must pass**:
 
 | Instance asks for | Quota | Scope |
@@ -91,25 +93,47 @@ preemption deletes the box and its disk rather than leaving them billing.
 | `CPUS` (on-demand) | asia-south1 | 100 | ✅ (not used — script is spot-only) |
 | `CPUS` (on-demand) | us-central1 | 200 | ✅ (not used — script is spot-only) |
 | `GPUS_ALL_REGIONS` | global | **0** | ❌ **blocks any GPU instance** |
-| `PREEMPTIBLE_CPUS` | asia-south1 | **0** | ❌ **blocks the spot vCPUs** |
-| `PREEMPTIBLE_CPUS` | us-central1 | **0** | ❌ blocks the fallback zone |
+| `PREEMPTIBLE_CPUS` | us-central1 | **0** | ❌ **blocks the spot vCPUs** |
+| `PREEMPTIBLE_CPUS` | asia-south1 | **0** | ❌ and not adjustable — see below |
 
 There is no `G2_CPUS` family quota — G2 machines count against generic
 `CPUS` / `PREEMPTIBLE_CPUS`.
 
 The L4 GPU quota itself is **already sufficient** — no GPU quota request is
-needed. Only the aggregate GPU switch and the preemptible-CPU counters are at
+needed. Only the aggregate GPU switch and the preemptible-CPU counter are at
 zero.
+
+<a id="adjustability-asia-south1-blocked"></a>
+#### Adjustability: asia-south1 blocked (2026-08-28)
+
+The console refuses an increase on `PREEMPTIBLE_CPUS` in `asia-south1` —
+*"you cannot adjust this quota."* `us-central1` takes the request without issue.
+The reason wasn't retrievable via CLI (`gcloud beta` not installed) but is
+almost certainly project age / billing history, or a regional capacity hold on
+that resource in `asia-south1` (Mumbai is a smaller region where this is common).
+
+Consequence: a spot `g2-standard-4` cannot be created in `asia-south1`.
+`scripts/session-start.sh` was changed to make `us-central1-a` the primary zone,
+with `asia-south1-a` kept as the fallback in case the quota opens up later.
+Recorded in the [ADR-0002](../adr/0002-single-cloud-gcp.md) follow-ups. This is
+not a change to the single-cloud decision — both zones are GCP.
+
+Cost of running from `us-central1` instead of `asia-south1`: interactive SSH
+round-trip during a session is ~200 ms from India vs. ~10–30 ms. Benchmark
+numbers are unaffected — the runner measures the server's own timings on the
+instance, not network latency to the laptop.
 
 ### Requests to file
 
 | Quota | Scope | 0 → | Rationale |
 |---|---|---|---|
 | `GPUS_ALL_REGIONS` | global | **1** | master switch; one GPU project-wide |
-| `PREEMPTIBLE_CPUS` | asia-south1 | **8** | 4 vCPU of the spot g2-standard-4, with headroom for a possible g2-standard-8 later |
-| `PREEMPTIBLE_CPUS` | us-central1 | **8** | same, for the fallback zone |
+| `PREEMPTIBLE_CPUS` | us-central1 | **8** | 4 vCPU of the spot g2-standard-4, with headroom for a possible g2-standard-8 later |
 
-Justification text (same for all three):
+`asia-south1` `PREEMPTIBLE_CPUS` is **not requestable** right now (above). Leave
+it; retry if the console later allows it.
+
+Justification text (same for both):
 
 > Personal learning project benchmarking LLM inference. One spot g2-standard-4
 > (1× L4, 4 vCPU), created and deleted per measurement session, never left
@@ -121,10 +145,11 @@ worst case is quoted at ~2 business days.
 ### How to request — Console (recommended)
 
 1. Console → **IAM & Admin → Quotas & System Limits**, project `charon-506614`.
-2. Search `GPUS_ALL_REGIONS` → tick the row (no region) → **Edit Quotas** →
+2. Search `GPUs (all regions)` → tick the row (no region) → **Edit Quotas** →
    `1` → submit.
-3. Search `Preemptible CPUs` → tick the `asia-south1` and `us-central1` rows →
-   **Edit Quotas** → `8` → submit.
+3. Search `Preemptible CPUs` → filter to region `us-central1` → tick that row →
+   **Edit Quotas** → `8` → submit. (The `asia-south1` row shows "you cannot
+   adjust this quota" — skip it.)
 
 ### How to request — CLI
 
@@ -139,21 +164,26 @@ gcloud beta quotas info list --service=compute.googleapis.com \
 gcloud beta quotas preferences create \
   --project=charon-506614 --service=compute.googleapis.com \
   --quota-id=<QUOTA_ID> --preferred-value=8 \
-  --dimensions=region=asia-south1 \
+  --dimensions=region=us-central1 \
   --justification="spot g2-standard-4, 1x L4, created/deleted per session"
 ```
 
-The global `GPUS_ALL_REGIONS` request takes no `--dimensions`.
+The global `GPUS_ALL_REGIONS` request takes no `--dimensions`. `gcloud beta` is
+not installed on the primary machine's SDK as of 2026-08-28 — the console path
+above is the one that's been used.
 
 ### Re-checking quota
 
 ```
-gcloud compute regions describe asia-south1 --project=charon-506614 --format=json \
+gcloud compute regions describe us-central1 --project=charon-506614 --format=json \
   | python3 -c 'import json,sys; [print(f"{q[\"metric\"]:<32} {q[\"limit\"]}") for q in json.load(sys.stdin)["quotas"] if "L4" in q["metric"] or q["metric"] in ("CPUS","PREEMPTIBLE_CPUS")]'
 
 gcloud compute project-info describe --project=charon-506614 --format=json \
   | python3 -c 'import json,sys; [print(f"{q[\"metric\"]:<20} {q[\"limit\"]}") for q in json.load(sys.stdin)["quotas"] if q["metric"]=="GPUS_ALL_REGIONS"]'
 ```
+
+Expect, once approved: `GPUS_ALL_REGIONS 1.0`, `PREEMPTIBLE_CPUS 8.0`,
+`PREEMPTIBLE_NVIDIA_L4_GPUS 1.0`.
 
 ---
 
@@ -162,13 +192,15 @@ gcloud compute project-info describe --project=charon-506614 --format=json \
 - [ ] **Billing budget alert** — ₹1,000/month with a threshold notification.
       Blocking before the first real `session-start.sh` run
       ([ADR-0002](../adr/0002-single-cloud-gcp.md) follow-up).
-- [ ] **Quota requests** — the three above; not yet filed as of 2026-08-28.
+- [ ] **Quota requests** — `GPUS_ALL_REGIONS` → 1 and `PREEMPTIBLE_CPUS`
+      (us-central1) → 8. Being filed via console 2026-08-28.
 - [ ] **`CHARON_PROJECT_ID` on the second machine.**
-- [ ] **Confirm `g2-standard-4` spot capacity and current L4 spot price in
-      `asia-south1`** before booking a session (ADR-0002 follow-up). The
-      us-central1 fallback is already wired into `session-start.sh`. No spot
-      price is asserted anywhere in this repo until it is checked against the
-      live console — it is not a Charon measurement.
+- [ ] **Confirm current L4 spot price in `us-central1`** before booking a session
+      (ADR-0002 follow-up). No spot price is asserted anywhere in this repo until
+      it is checked against the live console — it is not a Charon measurement.
+- [x] **`asia-south1` spot capacity** — not usable; quota not adjustable
+      (2026-08-28). `us-central1` promoted to primary zone. See the adjustability
+      finding above.
 
 ---
 
