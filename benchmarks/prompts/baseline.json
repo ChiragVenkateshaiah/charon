@@ -1,0 +1,13 @@
+{
+  "note": "Provisional Week 1 baseline prompt set. The canonical prompt set and the fixed token counts are a Week 2 decision (see benchmarks/methodology.md, 'Not yet decided') — this set exists only so the concurrency-1 row can be produced now. Prompts are deliberately close in tokenized length so the aggregates stay comparable; baseline_runner.py records prompt_tokens per request and flags a wide spread.",
+  "prompts": [
+    "Explain what a hash join is and when a query planner picks it over a nested loop join.",
+    "Describe how a write-ahead log lets a relational database recover after a crash.",
+    "Explain the difference between optimistic and pessimistic concurrency control.",
+    "Describe what a covering index is and why it can speed up a read query.",
+    "Explain how a bloom filter trades accuracy for memory when answering a lookup.",
+    "Describe the role of a memtable and an SST file in a log-structured merge tree.",
+    "Explain why connection pooling matters for a service that talks to a database.",
+    "Describe what happens during the prefill phase of transformer inference."
+  ]
+}
