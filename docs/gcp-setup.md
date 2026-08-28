@@ -83,7 +83,7 @@ reclaim the instance at ~30s notice. Charon uses spot deliberately
 `--provisioning-model=SPOT` with `--instance-termination-action=DELETE` so a
 preemption deletes the box and its disk rather than leaving them billing.
 
-### State as checked 2026-08-28
+### Initial state (2026-08-28, before requests)
 
 | Quota | Scope | Limit | Enough for one spot g2-standard-4 + L4? |
 |---|---|---|---|
@@ -123,24 +123,26 @@ round-trip during a session is ~200 ms from India vs. ~10–30 ms. Benchmark
 numbers are unaffected — the runner measures the server's own timings on the
 instance, not network latency to the laptop.
 
-### Requests to file
+### Requests — approved 2026-08-28
 
-| Quota | Scope | 0 → | Rationale |
+| Quota | Scope | 0 → | Verified |
 |---|---|---|---|
-| `GPUS_ALL_REGIONS` | global | **1** | master switch; one GPU project-wide |
-| `PREEMPTIBLE_CPUS` | us-central1 | **8** | 4 vCPU of the spot g2-standard-4, with headroom for a possible g2-standard-8 later |
+| `GPUS_ALL_REGIONS` | global | **1** | `limit=1.0` |
+| `PREEMPTIBLE_CPUS` | us-central1 | **8** | `limit=8.0` |
 
-`asia-south1` `PREEMPTIBLE_CPUS` is **not requestable** right now (above). Leave
-it; retry if the console later allows it.
+With `PREEMPTIBLE_NVIDIA_L4_GPUS` = 1 (us-central1, granted by default), all
+four quotas a spot `g2-standard-4` + L4 needs are now satisfied in us-central1.
 
-Justification text (same for both):
+`asia-south1` `PREEMPTIBLE_CPUS` is **not requestable** right now (above). Left
+at 0; retry if the console later allows it.
+
+Justification text used (kept here in case a re-request is needed):
 
 > Personal learning project benchmarking LLM inference. One spot g2-standard-4
 > (1× L4, 4 vCPU), created and deleted per measurement session, never left
 > running. Hard budget cap of ₹1,000/month.
 
-Upgraded billing account + small values are often auto-approved within minutes;
-worst case is quoted at ~2 business days.
+Both were approved the same day they were filed.
 
 ### How to request — Console (recommended)
 
@@ -189,22 +191,23 @@ Expect, once approved: `GPUS_ALL_REGIONS 1.0`, `PREEMPTIBLE_CPUS 8.0`,
 
 ## Still open
 
-- [ ] **Billing budget alert** — ₹1,000/month with a threshold notification.
-      Blocking before the first real `session-start.sh` run
-      ([ADR-0002](../adr/0002-single-cloud-gcp.md) follow-up).
-- [ ] **Quota requests** — `GPUS_ALL_REGIONS` → 1 and `PREEMPTIBLE_CPUS`
-      (us-central1) → 8. Being filed via console 2026-08-28.
+- [x] **Billing budget alert** — done 2026-08-28. ₹1,000/month, whole billing
+      account, thresholds 50 / 90 / 100 / 150%. Notifies only; does not cap spend.
+- [x] **Quota requests** — approved and verified 2026-08-28: `GPUS_ALL_REGIONS`
+      = 1, `PREEMPTIBLE_CPUS` (us-central1) = 8.
+- [x] **`asia-south1` spot capacity** — not usable; quota not adjustable
+      (2026-08-28). `us-central1` promoted to primary zone. See the adjustability
+      finding above.
 - [ ] **`CHARON_PROJECT_ID` on the second machine.**
 - [ ] **Confirm current L4 spot price in `us-central1`** before booking a session
       (ADR-0002 follow-up). No spot price is asserted anywhere in this repo until
       it is checked against the live console — it is not a Charon measurement.
-- [x] **`asia-south1` spot capacity** — not usable; quota not adjustable
-      (2026-08-28). `us-central1` promoted to primary zone. See the adjustability
-      finding above.
 
 ---
 
-## Once quota clears — the session loop
+## The session loop
+
+Quota and budget are in place as of 2026-08-28. A measurement session is:
 
 ```
 bash scripts/session-start.sh     # create the spot instance
