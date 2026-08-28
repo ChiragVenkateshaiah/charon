@@ -22,6 +22,7 @@ before relying on it (see [Re-checking quota](#re-checking-quota)).
 | Project name | Charon |
 | Billing | Pay-as-you-go (free trial exhausted). A full billing account can request GPU quota; a free-trial account cannot. |
 | Account | `chiragvenkateshaiah95@gmail.com` |
+| Other projects | None. Charon is the only project on this billing account (the default Gemini project was deleted 2026-08-28), so account-wide billing == Charon billing. |
 
 ### `CHARON_PROJECT_ID`
 
@@ -192,7 +193,8 @@ Expect, once approved: `GPUS_ALL_REGIONS 1.0`, `PREEMPTIBLE_CPUS 8.0`,
 ## Still open
 
 - [x] **Billing budget alert** — done 2026-08-28. ₹1,000/month, whole billing
-      account, thresholds 50 / 90 / 100 / 150%. Notifies only; does not cap spend.
+      account (= Charon only), thresholds 50 / 90 / 100 / 150%. Notifies only;
+      does not cap spend.
 - [x] **Quota requests** — approved and verified 2026-08-28: `GPUS_ALL_REGIONS`
       = 1, `PREEMPTIBLE_CPUS` (us-central1) = 8.
 - [x] **`asia-south1` spot capacity** — not usable; quota not adjustable

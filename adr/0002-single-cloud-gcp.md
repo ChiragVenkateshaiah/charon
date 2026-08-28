@@ -137,10 +137,11 @@ case is re-running Phase 1's measurements on different hardware.
 ## Follow-ups
 
 - [x] GCP billing budget alert configured — done 2026-08-28. ₹1,000/month,
-      "Specified amount", scoped to the whole billing account (which currently
-      holds only this project plus an unused default), alert thresholds at
-      50 / 90 / 100 / 150%. It notifies; it does not cap spend — the teardown
-      script and session discipline are the actual cap.
+      "Specified amount", scoped to the whole billing account, alert thresholds
+      at 50 / 90 / 100 / 150%. The account holds only the Charon project (the
+      default Gemini project was deleted 2026-08-28), so account-wide spend and
+      Charon spend are the same thing. It notifies; it does not cap spend — the
+      teardown script and session discipline are the actual cap.
 - [x] Confirm `g2-standard-4` spot capacity in `asia-south1` — **not usable as of
       2026-08-28.** The preemptible-CPU quota in `asia-south1` is not adjustable for
       this project (console: "you cannot adjust this quota"; likely project age or
