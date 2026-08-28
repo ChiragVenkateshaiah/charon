@@ -10,9 +10,9 @@ Rules for this file:
   `benchmarks/results/`; nothing else counts as a result.
 - "session" here means a work session. The paid GPU instance is always the
   "GPU session" or "measurement session", kept verbally distinct.
-- README "Current status" is the curated, owner-edited claim that moves at phase
-  boundaries. This file is the fast, session-granular log. They will disagree
-  between phase boundaries; that is expected.
+- README "Current status" is the curated, high-level claim — kept accurate but
+  deliberately not session-granular. This file is the fast, session-granular log
+  and carries the detail the README summarises.
 
 Phase 1 started: 2026-08-27
 

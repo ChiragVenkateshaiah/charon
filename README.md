@@ -44,9 +44,12 @@ written — the schema is a decision, not an afterthought bolted on after Week 3
 
 ## Current status
 
-**Phase 1, not yet started.** Scaffolding — repo structure, documentation, and tooling —
-is in place. No serving, benchmarking, or infrastructure code has been written yet;
-those are deliberate decisions made phase by phase, not generated up front. See
+**Phase 1, Week 1 — in progress.** Repo scaffolding, the naive serving baseline
+([`serving/naive_server.py`](serving/naive_server.py)), and the concurrency-1 benchmark
+runner ([`benchmarks/baseline_runner.py`](benchmarks/baseline_runner.py)) are in place,
+and the GCP spot instance is provisioned. The first measured number — the Week 1
+concurrency-1 baseline row — has not been produced yet. See
+[`docs/worklog.md`](docs/worklog.md) for session-level detail and
 [`docs/phase-1-plan.md`](docs/phase-1-plan.md) for the week-by-week plan.
 
 ## Phases
