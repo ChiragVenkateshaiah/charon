@@ -18,20 +18,21 @@ Phase 1 started: 2026-08-27
 
 ## Now
 
-- **Phase / week:** Phase 1, Week 1 (naive baseline) — in progress. The server is
-  built and CPU-smoke-tested; the Week 1 measurement (concurrency-1 metrics, first
-  row of the benchmark table) is not done, so the Week 1 exit condition is not met.
-- **In progress:** Week 1 baseline. `serving/naive_server.py` done; no measurement
-  runner yet, no GPU session yet.
+- **Phase / week:** Phase 1, Week 1 (naive baseline) — in progress. Server and
+  concurrency-1 runner are both built and CPU-tested against each other; the Week 1
+  measurement itself (concurrency-1 metrics, first row of the benchmark table) is
+  not done, so the Week 1 exit condition is not met.
+- **In progress:** Week 1 baseline. `serving/naive_server.py` and
+  `benchmarks/baseline_runner.py` both done; dry-run on CPU confirmed the
+  server/runner contract. No GPU session yet.
 - **Next actions:**
-  - Build the baseline runner (local CPU dev): fixed prompt set, warmup discard,
-    ≥3 runs, percentile aggregation over the server's per-request metrics, plus
-    `nvidia-smi` sampling for GPU util. Not the Week 2 load generator — just enough
-    for the concurrency-1 row.
-  - Estimate GPU-hours for the first measurement session; scope it to one 3–4h
-    block.
-  - First measurement session on `g2-standard-4` spot: Week 1 concurrency-1
-    metrics → baseline row committed under `benchmarks/results/`.
+  - Re-check the current L4 spot price in `us-central1` (`docs/gcp-setup.md` has
+    the 2026-08-28 figure) and set `CHARON_PROJECT_ID` on the second machine if
+    it will be used.
+  - First measurement session on `g2-standard-4` spot in `us-central1`: start
+    `naive_server`, run `baseline_runner.py`, commit the Week 1 concurrency-1
+    baseline row under `benchmarks/results/`. Estimated well under 1 GPU-hour of
+    run time; book ~2–3h for setup and margin.
 - **Open questions / blockers:**
   - `docs/incident-000-cpu-inference.md` still leaves one gap open: decode
     bandwidth explains only a fraction of the recalled 20–30 min CPU reply;
@@ -46,13 +47,16 @@ Phase 1 started: 2026-08-27
   - Week 6 scale-up: the instance is deleted per GPU session, so a 7B checkpoint
     re-downloads every time (~5–15 GB). Decide GCS model cache vs. eat the
     download during Week 6 scoping.
-  - `scripts/cost-check.sh` needs `CHARON_PROJECT_ID` set in the shell to be
-    useful at session start; currently unset locally.
+- **GCP:** ready. Project `charon-506614`, Compute Engine API on, quota approved
+  (`GPUS_ALL_REGIONS`=1, `PREEMPTIBLE_CPUS` us-central1=8, L4 spot=1), budget
+  alert live, `us-central1` primary (`asia-south1` preemptible-CPU quota not
+  adjustable). Full detail in `docs/gcp-setup.md`.
 - **Budget:** flexible target ~₹1,000/month ≈ ~24 GPU-hours at current spot list
   price (~₹42/hr all-in, checked 2026-08-28 — `docs/gcp-setup.md`); extendable if
   a measurement needs it. Spent this month: 0h (hand-tracked). No GPU session yet.
 - **Last session:** 2026-08-27 — session tooling built; incident-000 corrected;
-  Week 1 model chosen; naive baseline server written and CPU-smoke-tested.
+  Week 1 model chosen; naive baseline server written and CPU-smoke-tested. (The
+  2026-08-28 session — runner, GCP setup, budget reframe — logs at its `/end-day`.)
 
 ## Sessions
 

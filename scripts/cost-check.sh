@@ -4,9 +4,10 @@
 # running instances and disks of any kind, in any zone.
 #
 # WHY THIS SCRIPT EXISTS (read before changing it):
-# The project's entire budget is ~1,000 INR/month, roughly 36-40 GPU-hours. A single
-# forgotten instance or an orphaned disk (persistent disks bill even with nothing
-# attached) can consume a meaningful fraction of that in a day. This script is meant
+# The project runs on a ~1,000 INR/month target (~24 GPU-hours at GCP spot list
+# price; flexible, but the habit isn't). A single forgotten instance or an orphaned
+# disk (persistent disks bill even with nothing attached) can consume a meaningful
+# fraction of that in a day. This script is meant
 # to be run on a whim, with no arguments, any time there's doubt about what's live —
 # not just after session-end.sh. It intentionally does not filter by name, so it
 # also catches anything created outside the session scripts.

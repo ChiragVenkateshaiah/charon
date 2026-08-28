@@ -51,8 +51,10 @@ briefing report reality where they disagree:
   evidence that nothing is live. If anything is running, lead the briefing with
   it, before everything else.
 - Report GPU-hours spent this month from the worklog's Budget line
-  (hand-tracked, approximate). The hard constraint is ₹1,000/month; ~36–40
-  GPU-hours is the working estimate of what that buys, not a measured figure.
+  (hand-tracked, approximate). The budget is a flexible target of ~₹1,000/month,
+  extendable if a measurement needs it; at GCP spot list price (~₹42/hr all-in,
+  checked 2026-08-28, `docs/gcp-setup.md`) that's ~24 GPU-hours. The GPU-on
+  discipline is the real constraint, not the number.
 - If today's work needs a GPU run, estimate its GPU-hours and check the headroom
   before anything launches. Don't propose launching the instance for work that
   doesn't need it — development, debugging, analysis and writing happen locally

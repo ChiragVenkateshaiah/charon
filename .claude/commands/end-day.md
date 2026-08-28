@@ -139,8 +139,9 @@ Phase 1 started: not yet
   - <concrete, ordered>
 - **Open questions / blockers:**
   - <none, or list>
-- **Budget:** ₹1,000/month, ~36–40 GPU-hours (working estimate). Spent this
-  month: 0h (hand-tracked).
+- **Budget:** flexible target ~₹1,000/month ≈ ~24 GPU-hours at GCP spot list
+  price (`docs/gcp-setup.md`); extendable if a measurement needs it. Spent this
+  month: <n>h (hand-tracked).
 - **Last session:** —
 
 ## Sessions

@@ -4,9 +4,9 @@
 # session, and verify it's actually gone.
 #
 # WHY THIS SCRIPT EXISTS (read before changing it):
-# On a ~1,000 INR/month budget (36-40 GPU-hours), a GPU instance that fails to
-# delete and goes unnoticed is the single most expensive mistake available in this
-# project. This script does not just issue a delete — it confirms the delete
+# On a ~1,000 INR/month target (~24 GPU-hours at GCP spot list price), a GPU
+# instance that fails to delete and goes unnoticed is the single most expensive
+# mistake available in this project. This script does not just issue a delete — it confirms the delete
 # actually happened, and fails loudly (non-zero exit, clear error) if the instance
 # is still visible afterwards, rather than trusting that the gcloud command
 # succeeded silently. Never comment out or skip the verification step.

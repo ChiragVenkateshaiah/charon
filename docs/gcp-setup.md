@@ -141,7 +141,7 @@ Justification text used (kept here in case a re-request is needed):
 
 > Personal learning project benchmarking LLM inference. One spot g2-standard-4
 > (1× L4, 4 vCPU), created and deleted per measurement session, never left
-> running. Hard budget cap of ₹1,000/month.
+> running. Monthly budget around ₹1,000.
 
 Both were approved the same day they were filed.
 

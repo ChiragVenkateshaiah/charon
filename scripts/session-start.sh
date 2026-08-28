@@ -3,12 +3,13 @@
 # session-start.sh — bring up the Charon GPU instance for one measurement session.
 #
 # WHY THIS SCRIPT EXISTS (read before changing it):
-# The whole project runs on a ~1,000 INR/month budget, roughly 36-40 GPU-hours.
-# That budget only survives if the GPU is on for the duration of a measurement and
-# nothing more. Spot + --instance-termination-action=DELETE means a preemption
-# deletes the instance outright instead of leaving it (or its disk) stopped and
-# still billing. This is not a style choice: a persistent disk left behind after a
-# stopped instance would burn roughly a third of the monthly budget on its own.
+# The project runs on a flexible ~1,000 INR/month target (~24 GPU-hours at GCP
+# spot list price; see docs/gcp-setup.md). Flexible on the number, not on the
+# habit: the GPU is on for the duration of a measurement and nothing more.
+# Spot + --instance-termination-action=DELETE means a preemption deletes the
+# instance outright instead of leaving it (or its disk) stopped and still billing.
+# This is not a style choice: the 100 GB boot disk left behind after a stopped
+# instance bills hundreds of INR/month on its own for nothing.
 #
 # This script does not run any serving/benchmark code. It only provisions the box.
 # All development, debugging, and analysis happens locally on CPU, before and after
