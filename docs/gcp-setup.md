@@ -185,8 +185,8 @@ gcloud compute project-info describe --project=charon-506614 --format=json \
   | python3 -c 'import json,sys; [print(f"{q[\"metric\"]:<20} {q[\"limit\"]}") for q in json.load(sys.stdin)["quotas"] if q["metric"]=="GPUS_ALL_REGIONS"]'
 ```
 
-Expect, once approved: `GPUS_ALL_REGIONS 1.0`, `PREEMPTIBLE_CPUS 8.0`,
-`PREEMPTIBLE_NVIDIA_L4_GPUS 1.0`.
+As of 2026-08-28 this reads `GPUS_ALL_REGIONS 1.0`, `PREEMPTIBLE_CPUS 8.0`,
+`PREEMPTIBLE_NVIDIA_L4_GPUS 1.0` — all sufficient.
 
 ---
 
@@ -200,10 +200,45 @@ Expect, once approved: `GPUS_ALL_REGIONS 1.0`, `PREEMPTIBLE_CPUS 8.0`,
 - [x] **`asia-south1` spot capacity** — not usable; quota not adjustable
       (2026-08-28). `us-central1` promoted to primary zone. See the adjustability
       finding above.
+- [x] **L4 spot price** — checked 2026-08-28, see [Cost](#cost) below.
 - [ ] **`CHARON_PROJECT_ID` on the second machine.**
-- [ ] **Confirm current L4 spot price in `us-central1`** before booking a session
-      (ADR-0002 follow-up). No spot price is asserted anywhere in this repo until
-      it is checked against the live console — it is not a Charon measurement.
+
+---
+
+## Cost
+
+**GCP list price, checked 2026-08-28 — not a Charon measurement.** Retrieved from
+the Cloud Billing Catalog API (`cloudbilling.googleapis.com`, Compute Engine
+service `6F81-5844-456A`), INR, `us-central1`. Spot prices float and GCP can move
+the spot ceiling — re-check if it has been a while. The Week 7 cost model uses
+*measured* throughput against a rate like this; it does not live here.
+
+### Spot `g2-standard-4` + 1× L4, us-central1
+
+| Component | Rate | Qty | ₹/hour |
+|---|---|---|---|
+| L4 GPU (spot) | ₹32.13 / GPU-hr | 1 | 32.13 |
+| G2 vCPU (spot) | ₹1.4337 / vCPU-hr | 4 | 5.73 |
+| G2 RAM (spot) | ₹0.16796 / GiB-hr | 16 | 2.69 |
+| 100 GB balanced PD | ₹9.565 / GiB-month | 100 | ~1.31 |
+| **All-in** | | | **~₹41.9 / hour** |
+
+On-demand equivalent from the same catalog is ~₹67/hr of compute — spot is
+roughly **40% off**, not the 70–90% often quoted for GPUs. The L4 spot discount
+is modest.
+
+The boot disk bills only while the instance exists (`--boot-disk-auto-delete`,
+deleted per session), so between sessions the cost is ₹0 — the reason
+`scripts/session-start.sh` deletes rather than stops.
+
+### Budget headroom
+
+₹1,000/month ÷ ~₹41.9/hour ≈ **24 GPU-hours/month**.
+
+⚠️ The repo's standing figure of **"36–40 GPU-hours"** (README, CLAUDE.md,
+ADR-0002, phase-1-plan) is a working estimate, never measured. At today's list
+price it is optimistic by ~1.5×. Revising it repo-wide is a pending decision for
+the owner.
 
 ---
 

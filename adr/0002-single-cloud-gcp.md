@@ -150,6 +150,12 @@ case is re-running Phase 1's measurements on different hardware.
       `asia-south1-a` stays as the fallback in case the quota opens up later. This
       does not change the single-cloud decision — both zones are GCP. See
       `docs/gcp-setup.md`. Revisit if `asia-south1` quota becomes adjustable.
+- [x] Confirm current L4 spot price — checked 2026-08-28 via the Cloud Billing
+      Catalog API. Spot `g2-standard-4` + 1× L4 in `us-central1` is ~₹41.9/hour
+      all-in (GCP list price, not a Charon measurement). That is ~24 GPU-hours in
+      a ₹1,000 month — below the "36–40" working estimate this ADR and others
+      carry. See `docs/gcp-setup.md`. Whether to revise the estimate repo-wide is
+      open.
 - [ ] Revisit trigger: none anticipated within this project's scope. Would only
       revisit if GCP spot L4 pricing or capacity changed materially enough to threaten
       the ₹1,000/month budget.
