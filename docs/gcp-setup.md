@@ -235,10 +235,12 @@ deleted per session), so between sessions the cost is ₹0 — the reason
 
 ₹1,000/month ÷ ~₹41.9/hour ≈ **24 GPU-hours/month**.
 
-⚠️ The repo's standing figure of **"36–40 GPU-hours"** (README, CLAUDE.md,
-ADR-0002, phase-1-plan) is a working estimate, never measured. At today's list
-price it is optimistic by ~1.5×. Revising it repo-wide is a pending decision for
-the owner.
+The budget is a **flexible target**, not a hard cap (owner, 2026-08-28) — it can
+be extended when a specific measurement needs it. The repo's earlier "36–40
+GPU-hours" figure was an unmeasured guess; it was corrected to ~24 across README,
+CLAUDE.md, ADR-0002, phase-1-plan and the worklog. The GPU-on discipline (instance
+up only during a measurement, deleted per session, sessions scoped and estimated
+first) is unchanged and is the real constraint.
 
 ---
 

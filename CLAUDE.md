@@ -51,17 +51,23 @@ an API surface from a stale mental model.
 
 ## The budget
 
-**Hard constraint: ₹1,000/month, roughly 36–40 GPU-hours.** Any suggestion that
-involves a running GPU instance must account for this explicitly:
+**Target budget: ~₹1,000/month, flexible.** At current spot list price (~₹42/hour
+all-in for a `g2-standard-4` + L4 in `us-central1`, checked 2026-08-28 — see
+`docs/gcp-setup.md`) that is ~24 GPU-hours. The budget can be extended when a
+specific measurement needs it; it is a target to plan against, not a wall.
+
+The **discipline** is not flexible. Any suggestion that involves a running GPU
+instance must account for it explicitly:
 
 - The GPU is powered on only while a measurement is actively running. Development,
   debugging, analysis, and writing happen locally on CPU — don't suggest spinning up the
   instance for anything that doesn't need the GPU.
 - Instances are created and deleted per session via `scripts/session-start.sh` /
-  `scripts/session-end.sh`, never left stopped — a persistent disk alone would burn
-  roughly a third of the monthly budget.
-- Before proposing a benchmark run, estimate its GPU-hours and say so. Sessions should
-  be scoped and time-boxed, not open-ended "let's try a few things while it's up."
+  `scripts/session-end.sh`, never left stopped — the 100 GB boot disk alone bills
+  ~₹400–950/month (depending on disk type) for a box doing nothing.
+- Before proposing a benchmark run, estimate its GPU-hours (and so its rough cost) and
+  say so. Sessions should be scoped and time-boxed, not open-ended "let's try a few
+  things while it's up."
 - If asked to help debug something GPU-related, prefer reasoning from logs, code, and
   prior committed results over "spin it up and see."
 

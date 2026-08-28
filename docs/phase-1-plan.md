@@ -28,10 +28,10 @@ and analysis happens locally on CPU; the GPU is a GCP `g2-standard-4` (1× NVIDI
 Constraints section of the root `README.md` and `CLAUDE.md` for the budget this
 enforces.
 
-Spot only, hard budget alarm, teardown script wired before the first launch (see
-`scripts/session-start.sh` and `scripts/session-end.sh`). Sessions are booked and
-closed the same day. A GPU instance left running overnight is the most expensive
-mistake available in this phase.
+Spot only, billing budget alarm configured, teardown script wired before the
+first launch (see `scripts/session-start.sh` and `scripts/session-end.sh`).
+Sessions are booked and closed the same day. A GPU instance left running
+overnight is the most expensive mistake available in this phase.
 
 **Laptop caveat:** if using a laptop GPU, thermal throttling will corrupt long
 benchmark runs. Check clocks with `nvidia-smi dmon` during a run; if they sag, shorten

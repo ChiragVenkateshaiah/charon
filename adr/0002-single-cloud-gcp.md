@@ -16,8 +16,11 @@ hardware. That forces a provider choice up front, not something to defer.
 
 **Constraints in play:**
 
-- **Budget:** ₹1,000/month, roughly 36–40 GPU-hours. Tight enough that the choice of
-  provider needs to be made once and not re-litigated mid-project.
+- **Budget:** a flexible target of ~₹1,000/month (~24 GPU-hours at current spot
+  list price — see `docs/gcp-setup.md` and the Follow-ups below; the "36–40" this
+  ADR originally carried was an unmeasured guess). Extendable when a specific
+  measurement needs it, but modest enough that the provider choice should be made
+  once and not re-litigated mid-project.
 - **Hardware available:** none locally with a GPU. All GPU compute is rented, spot
   only, powered on only for the duration of a measurement.
 - **Existing platform commitments:** the active project portfolio is already
@@ -153,9 +156,9 @@ case is re-running Phase 1's measurements on different hardware.
 - [x] Confirm current L4 spot price — checked 2026-08-28 via the Cloud Billing
       Catalog API. Spot `g2-standard-4` + 1× L4 in `us-central1` is ~₹41.9/hour
       all-in (GCP list price, not a Charon measurement). That is ~24 GPU-hours in
-      a ₹1,000 month — below the "36–40" working estimate this ADR and others
-      carry. See `docs/gcp-setup.md`. Whether to revise the estimate repo-wide is
-      open.
+      a ₹1,000 month, vs the "36–40" this ADR and other docs carried. The budget
+      is a flexible target (owner, 2026-08-28), so the number was corrected to
+      ~24 repo-wide rather than the plan being cut. See `docs/gcp-setup.md`.
 - [ ] Revisit trigger: none anticipated within this project's scope. Would only
       revisit if GCP spot L4 pricing or capacity changed materially enough to threaten
       the ₹1,000/month budget.

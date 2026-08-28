@@ -48,8 +48,9 @@ Phase 1 started: 2026-08-27
     download during Week 6 scoping.
   - `scripts/cost-check.sh` needs `CHARON_PROJECT_ID` set in the shell to be
     useful at session start; currently unset locally.
-- **Budget:** ₹1,000/month, ~36–40 GPU-hours (working estimate). Spent this
-  month: 0h (hand-tracked). No GPU session yet.
+- **Budget:** flexible target ~₹1,000/month ≈ ~24 GPU-hours at current spot list
+  price (~₹42/hr all-in, checked 2026-08-28 — `docs/gcp-setup.md`); extendable if
+  a measurement needs it. Spent this month: 0h (hand-tracked). No GPU session yet.
 - **Last session:** 2026-08-27 — session tooling built; incident-000 corrected;
   Week 1 model chosen; naive baseline server written and CPU-smoke-tested.
 

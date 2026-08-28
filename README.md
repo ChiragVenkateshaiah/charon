@@ -64,15 +64,20 @@ Each phase's required number is defined in
 
 ## Constraints
 
-- **Budget: ₹1,000/month**, roughly 36–40 GPU-hours. This shapes everything else.
-- **Hardware:** `g2-standard-4` (1× NVIDIA L4, 24 GB VRAM), spot only, `asia-south1`
-  primary with `us-central1` fallback.
+- **Budget: target ~₹1,000/month, flexible.** At current spot list price that is
+  ~24 GPU-hours (~₹42/hour all-in; checked 2026-08-28, see
+  [`docs/gcp-setup.md`](docs/gcp-setup.md)). Extendable when a measurement needs
+  it — the number is a planning target; the GPU-on discipline below is the real
+  constraint.
+- **Hardware:** `g2-standard-4` (1× NVIDIA L4, 24 GB VRAM), spot only,
+  `us-central1` primary (`asia-south1` preemptible-CPU quota is not adjustable —
+  see [`docs/gcp-setup.md`](docs/gcp-setup.md)).
 - **Single cloud:** Google Cloud, deliberately, even though other projects here run on
   AWS. The reasoning is recorded as an ADR rather than left implicit.
 - **GPU-on discipline:** the instance is powered on only while a measurement is actively
   running. All development, debugging, analysis, and writing happens locally on CPU.
-  Instances are created and deleted per session — never left stopped, since a persistent
-  disk alone would consume roughly a third of the monthly budget.
+  Instances are created and deleted per session — never left stopped, since the 100 GB
+  boot disk alone bills hundreds of ₹/month for a box doing nothing.
 
 See [`CLAUDE.md`](CLAUDE.md) for the working agreement on AI-assisted work in this repo,
 and [`adr/`](adr/) for the decision log.
