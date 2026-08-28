@@ -34,7 +34,14 @@ ACCELERATOR="type=nvidia-l4,count=1"
 PRIMARY_ZONE="${CHARON_PRIMARY_ZONE:-us-central1-a}"
 FALLBACK_ZONE="${CHARON_FALLBACK_ZONE:-asia-south1-a}"
 
-IMAGE_FAMILY="${CHARON_IMAGE_FAMILY:-common-cu124}"
+# Deep Learning VM image. GCP retired the bare `common-cuNNN` families; the
+# current naming carries the driver in the name. This one ships NVIDIA driver
+# R580, new enough for the CUDA-13 runtime libs bundled with the pinned
+# torch 2.13 (`uv.lock`). Verified present (image v20260818) before the first
+# session. Re-check with:
+#   gcloud compute images describe-from-family <family> \
+#     --project=deeplearning-platform-release
+IMAGE_FAMILY="${CHARON_IMAGE_FAMILY:-common-cu129-ubuntu-2204-nvidia-580}"
 IMAGE_PROJECT="${CHARON_IMAGE_PROJECT:-deeplearning-platform-release}"
 BOOT_DISK_SIZE="${CHARON_BOOT_DISK_SIZE:-100GB}"
 
