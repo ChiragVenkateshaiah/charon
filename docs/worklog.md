@@ -47,6 +47,10 @@ Phase 1 started: 2026-08-27
   - Week 6 scale-up: the instance is deleted per GPU session, so a 7B checkpoint
     re-downloads every time (~5–15 GB). Decide GCS model cache vs. eat the
     download during Week 6 scoping.
+  - The wired fallback zone `asia-south1-a` is effectively dead until its
+    `PREEMPTIBLE_CPUS` quota becomes adjustable — if `us-central1-a` spot
+    capacity is unavailable, `session-start.sh` fails rather than falling back.
+    Acceptable (fails loud); self-heals if the quota opens.
 - **GCP:** ready. Project `charon-506614`, Compute Engine API on, quota approved
   (`GPUS_ALL_REGIONS`=1, `PREEMPTIBLE_CPUS` us-central1=8, L4 spot=1), budget
   alert live, `us-central1` primary (`asia-south1` preemptible-CPU quota not
@@ -54,13 +58,85 @@ Phase 1 started: 2026-08-27
 - **Budget:** flexible target ~₹1,000/month ≈ ~24 GPU-hours at current spot list
   price (~₹42/hr all-in, checked 2026-08-28 — `docs/gcp-setup.md`); extendable if
   a measurement needs it. Spent this month: 0h (hand-tracked). No GPU session yet.
-- **Last session:** 2026-08-27 — session tooling built; incident-000 corrected;
-  Week 1 model chosen; naive baseline server written and CPU-smoke-tested. (The
-  2026-08-28 session — runner, GCP setup, budget reframe — logs at its `/end-day`.)
+- **Last session:** 2026-08-28 — concurrency-1 baseline runner built + CPU
+  dry-run against `naive_server`; GCP fully provisioned (API, quota, budget
+  alert, `us-central1` promoted to primary); L4 spot price checked; ₹1,000
+  budget reframed repo-wide as a flexible target (~24 GPU-hours).
 
 ## Sessions
 
 <!-- new entries here -->
+
+### 2026-08-28
+
+**Done — committed**
+- `benchmarks/baseline_runner.py` + `benchmarks/prompts/baseline.json` +
+  `benchmarks/README.md` — the concurrency-1 baseline runner. Stdlib only (no new
+  deps); drives `naive_server` one request at a time, aggregates the server's own
+  per-request metrics as p50/p95/p99 across ≥3 runs with cross-run spread, samples
+  `nvidia-smi` over in-flight request windows, pulls the environment from
+  `/healthz`, writes raw JSON to `benchmarks/results/`. Encodes the seven
+  methodology rules; warns on violations. Not the Week 2 load generator. Dry-run
+  on CPU against `naive_server` confirmed the server/runner contract (field names,
+  forced output length, warmup discard, null-VRAM path, results schema).
+  Provisional prompt set — canonical set stays a Week 2 decision. (`88f8207`)
+- `docs/gcp-setup.md` — new: the full GCP groundwork record. Project
+  `charon-506614`, Compute Engine API enabled this session, `CHARON_PROJECT_ID`
+  env setup for the two-machine workflow, quota state, request list, Cost section,
+  re-check snippets. (`66f54a2` + later commits)
+- GCP provisioning:
+  - `us-central1` promoted to primary zone in `scripts/session-start.sh`,
+    `asia-south1-a` demoted to fallback — asia-south1 `PREEMPTIBLE_CPUS` quota is
+    not adjustable for this project. ADR-0002 follow-up updated. (`63f3ad2`)
+  - Quota approved and verified via API: `GPUS_ALL_REGIONS`=1,
+    `PREEMPTIBLE_CPUS` (us-central1)=8 (`PREEMPTIBLE_NVIDIA_L4_GPUS`=1 was
+    already default). Billing budget alert created: ₹1,000/month, whole billing
+    account, thresholds 50/90/100/150%. (`3f1cfd3`)
+  - Default Gemini project deleted — Charon is the only project on the billing
+    account. (`bd6dbfa`)
+  - L4 spot price checked via the Cloud Billing Catalog API, recorded in
+    `docs/gcp-setup.md` (Cost section). GCP list price, not a Charon
+    measurement. (`0f41208`)
+- Budget reframe: owner clarified the ₹1,000/month budget is a flexible target,
+  not a hard cap. Replaced "hard constraint / 36–40 GPU-hours" with "flexible
+  target / ~24 GPU-hours at spot list price" across `CLAUDE.md`, `README.md`,
+  `adr/0002`, `docs/phase-1-plan.md`, this file, `docs/gcp-setup.md`, the
+  `/start-day` and `/end-day` command files, and the three `scripts/` headers.
+  GPU-on discipline unchanged and now the explicit constraint. (`4b5186a`,
+  `74276df`)
+- `README.md` "Current status" refreshed — was "Phase 1, not yet started / no
+  serving code" (wrong); now "Phase 1, Week 1 — in progress". (`9ebc503`)
+
+**Tried, didn't work**
+- `gcloud beta quotas` (eligibility reason, CLI quota requests) — the `beta`
+  component isn't installed; didn't auto-install it, used the console for all
+  quota work.
+
+**Decisions**
+- **GPU zone: `us-central1` primary** (was `asia-south1`), forced by the
+  non-adjustable asia-south1 preemptible-CPU quota. Within ADR-0002's scope —
+  recorded in its follow-ups and `scripts/session-start.sh`; no new ADR.
+- **Budget is a flexible target, not a hard cap** (owner). Softened directly in
+  CLAUDE.md / README / ADR-0002; no new ADR.
+- No ADR owed.
+
+**Numbers committed**
+- none. Still only `.gitkeep` under `benchmarks/results/`. The L4 spot price
+  (~₹42/hr all-in) in `docs/gcp-setup.md` is a GCP list price, explicitly not a
+  Charon measurement (ADR-0001).
+
+**GPU**
+- Used this session: no — all work was local CPU + GCP console/API. Approx
+  GPU-hours: 0. Teardown verified by cost-check: n/a — cost-check ran clean (no
+  instances, no disks); no instance was ever created.
+
+**Left for next time**
+- First measurement session on `g2-standard-4` spot in `us-central1`: start
+  `naive_server`, run `baseline_runner.py`, commit the Week 1 concurrency-1
+  baseline row. Re-check the L4 spot price first; set `CHARON_PROJECT_ID` on the
+  second machine if it's used.
+- `.gitignore` has an uncommitted `career/` line — the owner's intentional
+  change, left for them.
 
 ### 2026-08-27
 
