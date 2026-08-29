@@ -18,31 +18,52 @@ Phase 1 started: 2026-08-27
 
 ## Now
 
-- **Phase / week:** Phase 1 — **Week 1 complete.** First measured number is
-  committed (`benchmarks/results/baseline-20260828T172338Z.json`, concurrency-1
-  naive baseline on the L4) with an analysis that satisfies the Week 1 exit
-  condition ("explain why a single-stream server underutilizes a GPU" —
-  `benchmarks/results/2026-08-28-week1-baseline.md`). **Week 2 next: the
-  concurrency sweep.**
-- **In progress:** nothing half-built. Uncommitted: `docs/worklog.md` (this
-  entry) and `.gitignore` (owner's `career/` line, not ours).
+- **Phase / week:** Phase 1, Week 1 (naive baseline) — **deliverable done, not
+  yet cleanly closed.** The first measured number is committed
+  (`benchmarks/results/baseline-20260828T172338Z.json`, concurrency-1 naive
+  baseline on the L4; all six required metrics — TTFT, TPOT, e2e, output tok/s,
+  GPU util, VRAM) with a written analysis
+  (`benchmarks/results/2026-08-28-week1-baseline.md`). Two threads keep Week 1
+  from being fully closed against `docs/phase-1-plan.md`:
+  1. **Methodology rule 4 not satisfied.** p50 spread is ~1%, but TTFT **p99**
+     spread is ~18% — one run's slow first-token tail, unexplained. Rule 4 says
+     "find it before continuing." Needs an investigation, a conscious
+     accept-as-known-anomaly, or a re-run.
+  2. **The exit condition is an owner self-check** — "explain, *without notes*,
+     why a single-stream server underutilizes a GPU." The written explanation
+     exists; whether the owner can deliver it unaided is theirs to confirm.
+  Minor, deferred to Week 2: input token length not fixed (41–49); driver /
+  nvidia-smi detail hand-filled not tooled; README master-table row not
+  populated; `benchmarks/methodology.md` still a stub (not "methodology-final").
+- **In progress:** Week 1 close-out — the two threads above. Uncommitted:
+  `.gitignore` (owner's `career/` line, not ours).
 - **Next actions:**
-  - **Week 2 — user drives the GPU provisioning by hand this time**
-    (`session-start.sh`, SSH, bootstrap, run, teardown), one hands-on pass now
-    that Week 1 de-risked the path; then back to scripted/delegated.
-    Interpretation is never delegated. See memory `infra-provisioning-split`.
+  - **Investigate the TTFT p99 spread** (rule 4): look at run 1's per-request
+    TTFT in `baseline-20260828T172338Z.json` (`raw.requests`), decide whether
+    it's a warmup-bleed / one-off GC pause / real, and record the call. Startable
+    now, local, no GPU.
+  - **Owner: self-assess the Week 1 exit** — talk through the "why" against the
+    committed log/result, then mark Week 1 closed or list what's still fuzzy.
+  - *(recommended, not required)* Run a profiler pass (`torch.profiler` or
+    Nsight) to turn "launch-overhead-bound" from a reasoned assertion into
+    evidence. Short local + GPU session.
+  - **Week 2 — user drives the GPU provisioning by hand** (`session-start.sh`,
+    SSH, bootstrap, run, teardown), one hands-on pass now that Week 1 de-risked
+    the path; then back to scripted/delegated. Interpretation never delegated.
+    See memory `infra-provisioning-split`.
   - Write `scripts/session-bootstrap.sh` from the scratchpad `remote_run.sh`
-    pattern — the repo provisions the box but has nothing for the on-box
-    setup+run. Good first hands-on task.
+    pattern — good first hands-on task.
   - Finalize `benchmarks/methodology.md` (Week 2 owns it): load-generator
     choice, canonical prompt set with fixed input length, hardware profile
-    block, the standard concurrency-sweep levels.
+    block, standard concurrency-sweep levels.
   - Week 2 measurement session: concurrency sweep 1 / 2 / 4 / 8 / 16 / 32 / 64
-    against the naive server → the throughput-vs-concurrency curve and its knee,
-    committed under `benchmarks/results/`.
+    against the naive server → throughput-vs-concurrency curve and its knee.
   - Before publishing the Week 1 articles: confirm
     `github.com/ChiragVenkateshaiah/charon` is public; re-check the L4 spot
     price on publish day.
+  - **Plan structure:** decide whether Phase 1's units stay calendar "weeks" or
+    become milestones advanced on exit conditions at AI-assisted pace (the Week
+    1 work took ~3h, not a week). Probably an ADR. The rigor bar does not move.
 - **Open questions / blockers:**
   - `docs/incident-000-cpu-inference.md` gap (carried): the recalled 20–30 min
     CPU reply is still unquantified against a controlled CPU baseline — needs a
