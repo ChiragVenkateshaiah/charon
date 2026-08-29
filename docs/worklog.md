@@ -18,54 +18,133 @@ Phase 1 started: 2026-08-27
 
 ## Now
 
-- **Phase / week:** Phase 1, Week 1 (naive baseline) — in progress. Server and
-  concurrency-1 runner are both built and CPU-tested against each other; the Week 1
-  measurement itself (concurrency-1 metrics, first row of the benchmark table) is
-  not done, so the Week 1 exit condition is not met.
-- **In progress:** Week 1 baseline. `serving/naive_server.py` and
-  `benchmarks/baseline_runner.py` both done; dry-run on CPU confirmed the
-  server/runner contract. No GPU session yet.
+- **Phase / week:** Phase 1 — **Week 1 complete.** First measured number is
+  committed (`benchmarks/results/baseline-20260828T172338Z.json`, concurrency-1
+  naive baseline on the L4) with an analysis that satisfies the Week 1 exit
+  condition ("explain why a single-stream server underutilizes a GPU" —
+  `benchmarks/results/2026-08-28-week1-baseline.md`). **Week 2 next: the
+  concurrency sweep.**
+- **In progress:** nothing half-built. Uncommitted: `docs/worklog.md` (this
+  entry) and `.gitignore` (owner's `career/` line, not ours).
 - **Next actions:**
-  - Re-check the current L4 spot price in `us-central1` (`docs/gcp-setup.md` has
-    the 2026-08-28 figure) and set `CHARON_PROJECT_ID` on the second machine if
-    it will be used.
-  - First measurement session on `g2-standard-4` spot in `us-central1`: start
-    `naive_server`, run `baseline_runner.py`, commit the Week 1 concurrency-1
-    baseline row under `benchmarks/results/`. Estimated well under 1 GPU-hour of
-    run time; book ~2–3h for setup and margin.
+  - **Week 2 — user drives the GPU provisioning by hand this time**
+    (`session-start.sh`, SSH, bootstrap, run, teardown), one hands-on pass now
+    that Week 1 de-risked the path; then back to scripted/delegated.
+    Interpretation is never delegated. See memory `infra-provisioning-split`.
+  - Write `scripts/session-bootstrap.sh` from the scratchpad `remote_run.sh`
+    pattern — the repo provisions the box but has nothing for the on-box
+    setup+run. Good first hands-on task.
+  - Finalize `benchmarks/methodology.md` (Week 2 owns it): load-generator
+    choice, canonical prompt set with fixed input length, hardware profile
+    block, the standard concurrency-sweep levels.
+  - Week 2 measurement session: concurrency sweep 1 / 2 / 4 / 8 / 16 / 32 / 64
+    against the naive server → the throughput-vs-concurrency curve and its knee,
+    committed under `benchmarks/results/`.
+  - Before publishing the Week 1 articles: confirm
+    `github.com/ChiragVenkateshaiah/charon` is public; re-check the L4 spot
+    price on publish day.
 - **Open questions / blockers:**
-  - `docs/incident-000-cpu-inference.md` still leaves one gap open: decode
-    bandwidth explains only a fraction of the recalled 20–30 min CPU reply;
-    prefill on a long system prompt, thermal throttling, swapping, and iGPU bus
-    contention are unranked suspects. Not chased directly — the machine was an
-    office laptop and is unrecoverable (model tag and memory config both closed
-    as unrecoverable in the doc). The Week 1 controlled CPU baseline, on the GCP
-    instance's own CPU, is what addresses it.
-  - Serving stack is transformers 5.x / torch 2.13 (pinned in `uv.lock`).
-    Recalled APIs are 4.x-shaped — verify against the installed version before
-    relying on remembered behaviour (CLAUDE.md version-drift rule).
-  - Week 6 scale-up: the instance is deleted per GPU session, so a 7B checkpoint
-    re-downloads every time (~5–15 GB). Decide GCS model cache vs. eat the
-    download during Week 6 scoping.
-  - The wired fallback zone `asia-south1-a` is effectively dead until its
-    `PREEMPTIBLE_CPUS` quota becomes adjustable — if `us-central1-a` spot
-    capacity is unavailable, `session-start.sh` fails rather than falling back.
-    Acceptable (fails loud); self-heals if the quota opens.
+  - `docs/incident-000-cpu-inference.md` gap (carried): the recalled 20–30 min
+    CPU reply is still unquantified against a controlled CPU baseline — needs a
+    deliberate CPU run (separate from the GPU work).
+  - transformers 5.x / torch 2.13 drift (carried): mostly navigated this
+    session — `dtype=`, the `StoppingCriteria` change, and torch cu13 needing
+    driver R580 all handled. Keep watching `generate()` kwargs.
+  - Week 6 7B checkpoint re-download (carried) — GCS cache vs. eat it, decide at
+    Week 6 scoping.
+  - **L4 spot capacity in `us-central1` is tight** — this session hit stockout
+    in 3 zones before `us-central1-c` took it. Week 2's session may need to try
+    several zones (`session-start.sh` takes `CHARON_PRIMARY_ZONE` /
+    `CHARON_FALLBACK_ZONE`). `asia-south1-a` is still dead (quota not adjustable).
+  - `/healthz` doesn't capture driver / `nvidia-smi` detail — Environment tables
+    hand-filled. Fix in the server for Week 2.
+  - `Articles/` tracked-or-gitignored is an open owner decision.
 - **GCP:** ready. Project `charon-506614`, Compute Engine API on, quota approved
   (`GPUS_ALL_REGIONS`=1, `PREEMPTIBLE_CPUS` us-central1=8, L4 spot=1), budget
   alert live, `us-central1` primary (`asia-south1` preemptible-CPU quota not
   adjustable). Full detail in `docs/gcp-setup.md`.
 - **Budget:** flexible target ~₹1,000/month ≈ ~24 GPU-hours at current spot list
-  price (~₹42/hr all-in, checked 2026-08-28 — `docs/gcp-setup.md`); extendable if
-  a measurement needs it. Spent this month: 0h (hand-tracked). No GPU session yet.
-- **Last session:** 2026-08-28 — concurrency-1 baseline runner built + CPU
-  dry-run against `naive_server`; GCP fully provisioned (API, quota, budget
-  alert, `us-central1` promoted to primary); L4 spot price checked; ₹1,000
-  budget reframed repo-wide as a flexible target (~24 GPU-hours).
+  price (~₹42/hr all-in, checked 2026-08-28 — `docs/gcp-setup.md`); extendable
+  if a measurement needs it. Spent this month: **~1.1h** (hand-tracked; the Week
+  1 measurement session).
+- **Last session:** 2026-08-28 — first GPU measurement session: Week 1
+  concurrency-1 baseline committed (the first measured number); analysis
+  corrected after an Opus review; Medium + LinkedIn draft articles + charts
+  written. ~1.1 GPU-hours.
 
 ## Sessions
 
 <!-- new entries here -->
+
+### 2026-08-28 — first GPU measurement session
+
+**Done — committed**
+- `scripts/session-start.sh` — the DLVM image family `common-cu124` was retired
+  from `deeplearning-platform-release` ("resource not found" on create).
+  Switched to `common-cu129-ubuntu-2204-nvidia-580` (driver R580, covers the
+  CUDA-13 runtime libs bundled with the pinned torch 2.13). Verified present
+  before launch. (`b55e7e3`)
+- **First GPU measurement session.** Spot L4 stockout in `us-central1-a` / `-b`
+  and `asia-south1-a`; instance landed in `us-central1-c` (via the script's zone
+  env overrides). Ran `serving/naive_server.py` + `benchmarks/baseline_runner.py`
+  at concurrency 1 → the Week 1 baseline, committed as
+  `benchmarks/results/baseline-20260828T172338Z.json` (raw: 360 request records
+  + 6683 nvidia-smi samples) plus the analysis writeup
+  `benchmarks/results/2026-08-28-week1-baseline.md`. Instance deleted,
+  cost-check clean. (`b0faad1`)
+- Analysis corrections after an Opus review of the result + writeup: the
+  weight-streaming argument had used peak VRAM where it meant weights;
+  retitled "launch-overhead-bound, not bandwidth-bound"; the ~1% cross-run
+  spread is p50 only (TTFT p99 spread is ~18%, one run's slow tail — the runner
+  only gates p50); added a determinism check and a busy-time / bandwidth-ceiling
+  cross-check. (`47ecaa5`)
+- `Articles/` — draft Medium (~2.4k words) and LinkedIn-newsletter (~700 words)
+  posts on the Week 1 result, four social-image charts, and
+  `Articles/charts/mkcharts.py` (self-contained SVG→PNG via `rsvg-convert`,
+  reads the committed result JSON). Reviewed by Opus; ~20 findings applied,
+  incl. a methodologically-broken hero chart (log-scaled bars → dot plot) and
+  unlabelled derived numbers. (`c211ddd`)
+
+**Done — not yet committed**
+- `docs/worklog.md` — this entry + Now-block rewrite.
+
+**Tried, didn't work**
+- First measurement run aborted at run 3 / 90 by an over-tight `timeout` on the
+  SSH command driving it. `baseline_runner.py` writes its results file only
+  after all runs finish, so nothing was salvageable. Re-ran as a detached
+  process polled from the laptop. Measurement unaffected; wall-clock paid twice.
+- `remote_run.sh` / `rerun.sh` / `drive_session.sh` — scratchpad orchestration
+  for the on-box setup+run. Worked, but are session artifacts, not in the repo.
+
+**Decisions**
+- Instance created in `us-central1-c` this session (the `-a` primary and `-b`
+  were stockout). No config change — `session-start.sh` env overrides handled
+  it. No ADR owed.
+
+**Numbers committed**
+- `benchmarks/results/baseline-20260828T172338Z.json` — Week 1 naive baseline,
+  concurrency 1, on the L4. **First committed measured result.** Analysis in
+  `benchmarks/results/2026-08-28-week1-baseline.md`. (Metric values live in
+  those files — paths-not-numbers rule.)
+
+**GPU**
+- Used this session: yes — one GCP spot L4 in `us-central1-c`. Approx
+  GPU-hours: ~1.1 (hand-tracked; most of it spot-stockout retries + the aborted
+  run, not the measurement). Teardown verified by cost-check: yes — instance
+  deleted, no disks, ₹0 ongoing; re-verified at end-day.
+
+**Left for next time**
+- Week 2 concurrency sweep (1→64) against the naive server → the
+  throughput-vs-concurrency curve and its knee.
+- Build `scripts/session-bootstrap.sh` from the scratchpad `remote_run.sh`
+  pattern — the repo provisions the box but has nothing for the on-box
+  setup+run.
+- Add `nvidia-smi` / driver capture to `/healthz` (Environment table was
+  hand-filled this run).
+- `benchmarks/methodology.md` is still a stub — Week 2 finalizes it.
+- Before publishing the articles: confirm `github.com/ChiragVenkateshaiah/charon`
+  is public; re-check the L4 spot price on publish day.
+- Decide whether `Articles/` stays tracked or gets gitignored (like `career/`).
 
 ### 2026-08-28
 
