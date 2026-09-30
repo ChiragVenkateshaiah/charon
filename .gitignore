@@ -44,6 +44,9 @@ huggingface_cache/
 # Logs
 *.log
 
+# Personal career notes — not part of the project record
+career/
+
 # NOTE: benchmarks/results/ is deliberately NOT ignored.
 # Committed benchmark results are the project's actual deliverable — see
 # adr/0001-measurement-discipline.md. Do not add a blanket ignore for
