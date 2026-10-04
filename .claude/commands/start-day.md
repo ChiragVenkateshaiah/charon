@@ -1,12 +1,14 @@
 ---
 description: Brief on where Charon stands at the start of a session. Does not start work.
 argument-hint: [optional note about today's focus]
-allowed-tools: Read, Grep, Glob, Bash(git fetch:*), Bash(git status:*), Bash(git log:*), Bash(git branch:*), Bash(git rev-list:*), Bash(git diff:*), Bash(ls:*), Bash(bash scripts/cost-check.sh:*)
+allowed-tools: Read, Grep, Glob, Bash(git fetch:*), Bash(git status:*), Bash(git log:*), Bash(git branch:*), Bash(git rev-list:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git pull --ff-only:*), Bash(ls:*), Bash(bash scripts/cost-check.sh:*)
 ---
 
 You are starting a work session on Charon. Produce a short briefing and stop.
 Do **not** write code, edit files, or launch anything — this command only
-orients. It cannot create or change the worklog; that is `/end-day`'s job.
+orients. It cannot create or change the worklog; that is `/end-day`'s job. The
+one exception is the fast-forward pull in step 1, which only brings in commits
+already pushed from the other machine.
 
 Keep the whole briefing under ~20 lines. Omit a heading rather than writing
 "none" under it.
@@ -16,15 +18,32 @@ Keep the whole briefing under ~20 lines. Omit a heading rather than writing
 - `git fetch origin`, then `git status -sb` and `git log --oneline -10`.
 - If the tree is dirty, report it first — uncommitted work doesn't travel
   between machines, and this repo is worked from two.
+- If the tree is clean and the branch is strictly **behind** `origin/<branch>`
+  (the other machine pushed), run `git pull --ff-only` and report how many
+  commits came in. Never pull into a dirty tree.
 - If the branch has diverged from `origin/<branch>` after the fetch, say so and
   tell the user to reconcile before starting.
 
-## 2. Read the worklog
+## 2. Read the project state
 
-Read `docs/worklog.md`. Read only the **Now** block and the most recent 2–3
-entries under **Sessions**; don't summarize older history. If the file is
-missing, say so — the first `/end-day` creates it — and brief from git history
-and `docs/phase-1-plan.md` instead.
+Read, in this order, and only as much as the briefing needs:
+
+- `docs/worklog.md` — only the **Now** block and the most recent 2–3 entries
+  under **Sessions**; don't summarize older history. If the file is missing, say
+  so — the first `/end-day` creates it — and brief from git history and
+  `docs/phase-1-plan.md` instead.
+- `docs/phase-1-plan.md` — only the section for the current week (per the Now
+  block) and the cadence rules at the end.
+- `README.md` — only the **Current status** section.
+- `adr/` — list the files and read titles/status lines only, so decisions made
+  since the last session are known. Read an ADR in full only if today's focus
+  touches it.
+- `benchmarks/results/` — the newest analysis `.md` in full. For the newest raw
+  `.json`, read only its top-level metadata/summary keys (config, environment,
+  percentiles), never the per-request arrays.
+- Any other `.md` under `docs/`, `serving/`, `benchmarks/`, `infra/` or
+  `optimize/` that changed since the last worklog entry
+  (`git log --since=<that date> --name-only`).
 
 ## 3. Cross-check Now against reality
 
