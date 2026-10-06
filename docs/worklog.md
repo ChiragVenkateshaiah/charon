@@ -92,6 +92,10 @@ Phase 1 started: 2026-08-27
   - `Articles/` tracked-or-gitignored is an open owner decision (carried).
   - README "Current status" is stale — it still says the first measured number
     hasn't been produced. Owner edit.
+  - **Visualization simulator is hypothetical** (new): the "what could
+    change" section of `visualization.html` recombines the measured token
+    budget under stated assumptions (batching idealized). None of its
+    scenarios has been run; each needs an L4 run before it is a number.
 - **GCP:** ready, on **both machines** now. Project `charon-506614`, Compute
   Engine API on, quota approved (`GPUS_ALL_REGIONS`=1, `PREEMPTIBLE_CPUS`
   us-central1=8, L4 spot=1), budget alert live. Second machine (WSL): gcloud
@@ -102,13 +106,50 @@ Phase 1 started: 2026-08-27
   price (~₹42/hr all-in, checked 2026-08-28 — `docs/gcp-setup.md`); extendable
   if a measurement needs it. Spent this month (October): **~0.53h**
   (hand-tracked; the Nsight profiling session). August: ~1.1h. September: 0.
-- **Last session:** 2026-10-05/06 — simplified roofline, then a profiling-only
-  Nsight Systems trace of the unchanged Week 1 server on the pinned Week 1
-  image; second machine set up for GCP. ~0.53 GPU-hours.
+- **Last session:** 2026-10-06 (later) — interactive visualization of the
+  Nsight trace (`benchmarks/profiles/2026-10-06-week1-nsys/visualization.html`);
+  no GPU. Earlier the same day: roofline + the profiling GPU session.
 
 ## Sessions
 
 <!-- new entries here -->
+
+### 2026-10-06 (later) — trace visualization
+
+**Done — committed**
+- Interactive page for the 2026-10-06 Nsight trace:
+  `benchmarks/nsys_viz_data.py` extracts one real decode step, the per-step
+  series, and gap / launch-lag histograms from the trace sqlite and renders
+  `benchmarks/profiles/2026-10-06-week1-nsys/visualization.html` from
+  `benchmarks/nsys_viz_template.html` (data in `full/viz-data.json`). Replay
+  animation, measured evidence charts, and an optimization simulator labelled
+  hypothetical throughout. Also published as a private claude.ai artifact.
+  (`866c348`)
+
+**Tried, didn't work**
+- No browser on this machine, so the page was not visually previewed — only
+  a JavaScript syntax check (esprima) and a hand check of the simulator
+  arithmetic against the Week 1 baseline. Layout issues, if any, are unseen.
+- `quickjs` would not install on Python 3.14 (used esprima instead).
+
+**Decisions**
+- Owner reply-style preference recorded globally in `~/.claude/CLAUDE.md`
+  (outside the repo; ASD-STE100 + a closing "In a nutshell" section). Not a
+  project decision; no ADR.
+
+**Numbers committed**
+- `benchmarks/results/`: none. The page re-presents the profiled trace and
+  adds hypothetical scenarios; it produces no result.
+
+**GPU**
+- Used this session: no. Approx GPU-hours: 0 (no instance since the earlier
+  profiling session). Teardown verified by cost-check: yes — no instances, no
+  disks.
+
+**Left for next time**
+- Unchanged from the earlier entry: run-label fix, TTFT p99 (run 2), Week 1
+  self-check, plan-structure decision, next profiling step vs Week 2.
+- Look at `visualization.html` in a browser once and report any layout break.
 
 ### 2026-10-06 — roofline + Nsight Systems profile (spans 2026-10-05/06)
 
