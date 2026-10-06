@@ -1,0 +1,84 @@
+{
+  "schema": "charon-roofline-inputs-v1",
+  "chart_heading": "Charon Week 1 baseline — simplified roofline",
+  "title": "Simplified Charon Week 1 baseline",
+  "subtitle": "Qwen2.5-1.5B / NVIDIA L4 / BF16 / batch 1",
+  "note": "Inputs for benchmarks/roofline.py. Every value carries a 'kind'. 'measured' values are NOT stored here — they are read from the committed result file by key path, so this file cannot drift from the run. Derived values are never stored; the script computes them.",
+  "result_file": "benchmarks/results/baseline-20260828T172338Z.json",
+  "output_svg": "docs/week1-roofline.svg",
+  "measured": {
+    "decode_tokens_per_s": {
+      "path": ["summary", "across_runs", "decode_tokens_per_s", "p50", "median"],
+      "unit": "tok/s",
+      "label": "decode throughput, p50 (median of 3 runs)"
+    },
+    "tpot_s": {
+      "path": ["summary", "across_runs", "tpot_s", "p50", "median"],
+      "unit": "s",
+      "label": "TPOT, p50"
+    },
+    "ttft_s": {
+      "path": ["summary", "across_runs", "ttft_s", "p50", "median"],
+      "unit": "s",
+      "label": "TTFT, p50"
+    },
+    "e2e_s": {
+      "path": ["summary", "across_runs", "e2e_s", "p50", "median"],
+      "unit": "s",
+      "label": "end-to-end latency (128 tok), p50"
+    },
+    "gpu_util_pct": {
+      "path": ["summary", "gpu", "util_gpu_pct", "p50"],
+      "unit": "%",
+      "label": "nvidia-smi busy-time utilization, p50 (in-flight samples)"
+    },
+    "weights_vram_bytes": {
+      "path": ["environment", "healthz", "weights_vram_bytes"],
+      "unit": "B",
+      "label": "weights resident in VRAM at load"
+    },
+    "vram_used_mb_max": {
+      "path": ["summary", "gpu", "mem_used_mb_max"],
+      "unit": "MB",
+      "label": "nvidia-smi memory.used, max"
+    }
+  },
+  "datasheet": {
+    "peak_bf16_flops": {
+      "value": 121e12,
+      "unit": "FLOP/s",
+      "source": "NVIDIA L4 datasheet, dense BF16 tensor core (242 with sparsity). Not measured."
+    },
+    "memory_bandwidth_bytes_per_s": {
+      "value": 300e9,
+      "unit": "B/s",
+      "source": "NVIDIA L4 datasheet. Not measured."
+    }
+  },
+  "assumptions": {
+    "parameters": {
+      "value": 1.54e9,
+      "unit": "params",
+      "source": "Published Qwen2.5-1.5B count, rounded; consistent with weights_vram_bytes / 2 B per bf16 param = 1.5437e9."
+    },
+    "flops_per_param_per_token": {
+      "value": 2,
+      "unit": "FLOP",
+      "source": "Standard 2N forward-pass approximation (one multiply-add per weight). Ignores attention-score FLOPs (small at a 128-token context) and elementwise ops."
+    },
+    "bytes_per_token_model": {
+      "value": "weights_vram_bytes",
+      "source": "Simplified traffic model: every decode step reads the full weight set from DRAM once (weights >> the L4's L2, so no reuse across steps). Ignores KV-cache, activation and logits traffic, so it UNDER-counts bytes moved."
+    },
+    "gpu_cost_inr_per_hour": {
+      "value": 69,
+      "unit": "INR/h",
+      "source": "Owner-supplied 2026-10-05 as the observed effective GPU rate. Not traced to a committed billing record; differs from the ~₹41.9/h spot list price in docs/gcp-setup.md. Not a guaranteed GCP price."
+    },
+    "cost_duty_cycle": {
+      "value": 1.0,
+      "source": "Cost/token assumes the instance generates at the stated rate for every billed second — no idle, no setup, no prefill time. Real cost per token is higher."
+    }
+  },
+  "hypothetical_tokens_per_s": [50, 70, 100]
+}

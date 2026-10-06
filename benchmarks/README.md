@@ -9,6 +9,11 @@ whose raw output is committed under `results/`. Harness code is not a result.
 - `prompts/baseline.json` — provisional Week 1 prompt set (see the file's `note`).
 - `baseline_runner.py` — the concurrency-1 runner (Week 1 only).
 - `results/` — committed raw output from real GPU runs. Nothing else goes here.
+- `roofline.py` + `roofline-week1.json` — simplified roofline over a committed
+  result (stdlib, CPU only; analysis, not a result). Writes `docs/week1-roofline.svg`;
+  report in `docs/week1-roofline.md`. For a new run, copy the config, point
+  `result_file` / `output_svg` at it, and pass its path as the first argument.
+  Checks: `python3 -m unittest benchmarks/test_roofline.py`.
 
 ## `baseline_runner.py` — Week 1 concurrency-1 baseline
 
