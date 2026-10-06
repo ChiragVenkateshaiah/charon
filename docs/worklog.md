@@ -18,84 +18,171 @@ Phase 1 started: 2026-08-27
 
 ## Now
 
-- **Phase / week:** Phase 1, Week 1 (naive baseline) — **deliverable done, not
-  yet cleanly closed.** The first measured number is committed
-  (`benchmarks/results/baseline-20260828T172338Z.json`, concurrency-1 naive
-  baseline on the L4; all six required metrics — TTFT, TPOT, e2e, output tok/s,
-  GPU util, VRAM) with a written analysis
-  (`benchmarks/results/2026-08-28-week1-baseline.md`). Two threads keep Week 1
-  from being fully closed against `docs/phase-1-plan.md`:
-  1. **Methodology rule 4 not satisfied.** p50 spread is ~1%, but TTFT **p99**
-     spread is ~18% — one run's slow first-token tail, unexplained. Rule 4 says
-     "find it before continuing." Needs an investigation, a conscious
-     accept-as-known-anomaly, or a re-run.
+- **Phase / week:** Phase 1, Week 1 (naive baseline) — **deliverable done, still
+  not cleanly closed.** By the calendar this is ~Week 6; by exit conditions it is
+  Week 1. The first measured number is committed
+  (`benchmarks/results/baseline-20260828T172338Z.json`, analysis
+  `benchmarks/results/2026-08-28-week1-baseline.md`). What still keeps Week 1
+  open against `docs/phase-1-plan.md`:
+  1. **Methodology rule 4** — the TTFT p99 cross-run spread is unexplained. It is
+     in **run 2**, not run 1 as three docs say (see Open questions).
   2. **The exit condition is an owner self-check** — "explain, *without notes*,
-     why a single-stream server underutilizes a GPU." The written explanation
-     exists; whether the owner can deliver it unaided is theirs to confirm.
-  Minor, deferred to Week 2: input token length not fixed (41–49); driver /
-  nvidia-smi detail hand-filled not tooled; README master-table row not
-  populated; `benchmarks/methodology.md` still a stub (not "methodology-final").
-- **In progress:** Week 1 close-out — the two threads above. Uncommitted:
-  `.gitignore` (owner's `career/` line, not ours).
+     why a single-stream server underutilizes a GPU." There is now trace
+     evidence to explain it against:
+     `benchmarks/profiles/2026-10-06-week1-nsys/report.md`.
+  **Drift checkpoint overdue:** the last committed result in
+  `benchmarks/results/` is 2026-08-28 — ADR-0001's "a number every month" and
+  the plan's end-of-Week-2 checkpoint have both passed. The 2026-10-06 profile
+  is diagnostic (profiled, perturbed) and does **not** count as a result.
+- **In progress:** nothing half-done. All session work is committed and pushed.
 - **Next actions:**
-  - **Investigate the TTFT p99 spread** (rule 4): look at run 1's per-request
-    TTFT in `baseline-20260828T172338Z.json` (`raw.requests`), decide whether
-    it's a warmup-bleed / one-off GC pause / real, and record the call. Startable
-    now, local, no GPU.
-  - **Owner: self-assess the Week 1 exit** — talk through the "why" against the
-    committed log/result, then mark Week 1 closed or list what's still fuzzy.
-  - *(recommended, not required)* Run a profiler pass (`torch.profiler` or
-    Nsight) to turn "launch-overhead-bound" from a reasoned assertion into
-    evidence. Short local + GPU session.
-  - **Week 2 — user drives the GPU provisioning by hand** (`session-start.sh`,
-    SSH, bootstrap, run, teardown), one hands-on pass now that Week 1 de-risked
-    the path; then back to scripted/delegated. Interpretation never delegated.
-    See memory `infra-provisioning-split`.
-  - Write `scripts/session-bootstrap.sh` from the scratchpad `remote_run.sh`
-    pattern — good first hands-on task.
+  - **Owner: fix (or not) the run-label prose** — "run 1" → "run 2" in
+    `benchmarks/results/2026-08-28-week1-baseline.md:35`,
+    `docs/week1-profile-card.md:37`, and the TTFT item below. Five minutes,
+    local. The raw JSON is correct and must not change.
+  - **Investigate the TTFT p99 spread** (rule 4): run 2's per-request TTFT in
+    `baseline-20260828T172338Z.json` (`raw.requests`) — warmup bleed, one-off
+    pause, or real — and record the call. Local, no GPU.
+  - **Owner: self-assess the Week 1 exit**, now against the roofline
+    (`docs/week1-roofline.md`) and the Nsight report; then mark Week 1 closed
+    or list what's still fuzzy.
+  - **Plan structure:** decide calendar weeks vs milestones advanced on exit
+    conditions. Probably an ADR. The rigor bar does not move.
+  - **Decide the next profiling step vs Week 2 first.** The report recommends a
+    CPU-sampling re-run of the same trace (needs owner approval to lower
+    `kernel.perf_event_paranoid` on the throwaway VM — CPU sampling was refused
+    this session), then Nsight Compute on the two GEMV kernels. The overdue
+    checkpoint argues for Week 2 first.
   - Finalize `benchmarks/methodology.md` (Week 2 owns it): load-generator
     choice, canonical prompt set with fixed input length, hardware profile
-    block, standard concurrency-sweep levels.
+    block (include the Python version — not recorded in Week 1), standard
+    concurrency-sweep levels.
   - Week 2 measurement session: concurrency sweep 1 / 2 / 4 / 8 / 16 / 32 / 64
     against the naive server → throughput-vs-concurrency curve and its knee.
+    `scripts/session-bootstrap.sh` now covers on-box setup; the sweep needs its
+    own driver modelled on `scripts/profile-session.sh`.
   - Before publishing the Week 1 articles: confirm
     `github.com/ChiragVenkateshaiah/charon` is public; re-check the L4 spot
     price on publish day.
-  - **Plan structure:** decide whether Phase 1's units stay calendar "weeks" or
-    become milestones advanced on exit conditions at AI-assisted pace (the Week
-    1 work took ~3h, not a week). Probably an ADR. The rigor bar does not move.
 - **Open questions / blockers:**
+  - **Run-label error** (new): Week 1's slow TTFT tail is run 2 in the raw
+    JSON; the analysis, profile card and this file said run 1. Reported, not
+    fixed — owner's call.
+  - **`.gitignore` vs profile evidence** (new): `env/` and `*.log` are ignored
+    generically, so the profile's environment records and logs were
+    force-added in `c2a806e`. Decide: keep, or add negation rules for
+    `benchmarks/profiles/` so future profiles don't need a force-add.
+  - **Python version drift** (new): the profiling instance resolved Python
+    3.14.8 via `uv sync --locked`; Week 1 didn't record its Python. Record it
+    from now on.
+  - **₹69/h "observed effective rate"** (new, owner-supplied) vs the ~₹41.9/h
+    spot list price in `docs/gcp-setup.md` — unreconciled; both kept, neither
+    overwritten.
   - `docs/incident-000-cpu-inference.md` gap (carried): the recalled 20–30 min
-    CPU reply is still unquantified against a controlled CPU baseline — needs a
-    deliberate CPU run (separate from the GPU work).
-  - transformers 5.x / torch 2.13 drift (carried): mostly navigated this
-    session — `dtype=`, the `StoppingCriteria` change, and torch cu13 needing
-    driver R580 all handled. Keep watching `generate()` kwargs.
-  - Week 6 7B checkpoint re-download (carried) — GCS cache vs. eat it, decide at
-    Week 6 scoping.
-  - **L4 spot capacity in `us-central1` is tight** — this session hit stockout
-    in 3 zones before `us-central1-c` took it. Week 2's session may need to try
-    several zones (`session-start.sh` takes `CHARON_PRIMARY_ZONE` /
-    `CHARON_FALLBACK_ZONE`). `asia-south1-a` is still dead (quota not adjustable).
-  - `/healthz` doesn't capture driver / `nvidia-smi` detail — Environment tables
-    hand-filled. Fix in the server for Week 2.
-  - `Articles/` tracked-or-gitignored is an open owner decision.
-- **GCP:** ready. Project `charon-506614`, Compute Engine API on, quota approved
-  (`GPUS_ALL_REGIONS`=1, `PREEMPTIBLE_CPUS` us-central1=8, L4 spot=1), budget
-  alert live, `us-central1` primary (`asia-south1` preemptible-CPU quota not
-  adjustable). Full detail in `docs/gcp-setup.md`.
+    CPU reply is still unquantified against a controlled CPU baseline.
+  - transformers 5.x / torch 2.13 drift (carried). Keep watching
+    `generate()` kwargs.
+  - Week 6 7B checkpoint re-download (carried) — decide at Week 6 scoping.
+  - **L4 spot capacity** (carried): `us-central1-c` took it first try on
+    2026-10-06; `-a`/`-b` stocked out in August. `profile-session.sh` defaults
+    to `-c` then `-a`. `asia-south1-a` is still dead.
+  - `/healthz` doesn't capture driver / `nvidia-smi` detail (carried). The
+    bootstrap now records it per session under the artifact dir, but the
+    server itself still doesn't.
+  - `Articles/` tracked-or-gitignored is an open owner decision (carried).
+  - README "Current status" is stale — it still says the first measured number
+    hasn't been produced. Owner edit.
+- **GCP:** ready, on **both machines** now. Project `charon-506614`, Compute
+  Engine API on, quota approved (`GPUS_ALL_REGIONS`=1, `PREEMPTIBLE_CPUS`
+  us-central1=8, L4 spot=1), budget alert live. Second machine (WSL): gcloud
+  in `~/google-cloud-sdk`, `CHARON_PROJECT_ID` in `~/.bashrc`, uv in
+  `~/.local/bin` (2026-10-06) — `docs/gcp-setup.md`'s "second machine"
+  checkbox can be ticked. Full detail in `docs/gcp-setup.md`.
 - **Budget:** flexible target ~₹1,000/month ≈ ~24 GPU-hours at current spot list
   price (~₹42/hr all-in, checked 2026-08-28 — `docs/gcp-setup.md`); extendable
-  if a measurement needs it. Spent this month: **~1.1h** (hand-tracked; the Week
-  1 measurement session).
-- **Last session:** 2026-08-28 — first GPU measurement session: Week 1
-  concurrency-1 baseline committed (the first measured number); analysis
-  corrected after an Opus review; Medium + LinkedIn draft articles + charts
-  written. ~1.1 GPU-hours.
+  if a measurement needs it. Spent this month (October): **~0.53h**
+  (hand-tracked; the Nsight profiling session). August: ~1.1h. September: 0.
+- **Last session:** 2026-10-05/06 — simplified roofline, then a profiling-only
+  Nsight Systems trace of the unchanged Week 1 server on the pinned Week 1
+  image; second machine set up for GCP. ~0.53 GPU-hours.
 
 ## Sessions
 
 <!-- new entries here -->
+
+### 2026-10-06 — roofline + Nsight Systems profile (spans 2026-10-05/06)
+
+**Done — committed**
+- Simplified roofline for the Week 1 baseline: `benchmarks/roofline.py`, inputs
+  `benchmarks/roofline-week1.json` (measured values read from the result JSON
+  by key path), checks `benchmarks/test_roofline.py`, report
+  `docs/week1-roofline.md` + chart `docs/week1-roofline.svg`. Analysis over
+  the committed run, not a result. (`9d230e6`)
+- Session scripts: `scripts/session-start.sh` takes `CHARON_IMAGE` to pin an
+  exact DLVM image; `scripts/session-bootstrap.sh` (on-box env record + `uv sync
+  --locked` + find/install nsys); `scripts/profile-nsys.sh` (smoke then full
+  trace of the unchanged server/runner, SIGINT stop, stats export);
+  `scripts/profile-session.sh` (laptop-side driver with a teardown trap).
+  `.gitignore` excludes trace binaries under `benchmarks/profiles/`. Dry-run
+  tested locally with stub nsys/gcloud before any GPU time. (`be2f84c`)
+- **Profiling-only GPU session:** Nsight Systems trace of the unchanged Week 1
+  server on the pinned Week 1 image, 20 warmup + 30 measured requests.
+  Analyzer `benchmarks/nsys_analyze.py`; report, summary, stats, env records
+  and logs under `benchmarks/profiles/2026-10-06-week1-nsys/`. Reading: a
+  host-bound decode loop around GEMV kernels that may be bandwidth-limited —
+  a hypothesis with evidence, not a diagnosis; see the report. (`c2a806e`)
+- `decbdf3` (commands update from 2026-10-04) pushed along with the above.
+- Pushed: `ab847b2..c2a806e`.
+
+**Done — not yet committed**
+- Large trace binaries, local only and gitignored by design:
+  `benchmarks/profiles/2026-10-06-week1-nsys/full/trace.nsys-rep`,
+  `full/trace.sqlite.gz`, the unpacked `full/trace.sqlite` (regenerable from
+  the `.gz`), and `smoke/trace.nsys-rep` / `smoke/trace.sqlite.gz`. They exist
+  **only on this machine**.
+
+**Tried, didn't work**
+- First profiling attempt stopped at step 1: no nsys, GPU or gcloud on this
+  machine (correct stop per the brief).
+- nsys CPU IP/backtrace sampling and context-switch tracing: "not supported"
+  on the GCE VM, so the trace has no CPU/Python stacks.
+- `gcloud auth login` couldn't open a browser from WSL; worked by pasting the
+  URL into the Windows browser.
+- Auto-editing `~/.bashrc` / installing uv was refused by the permission
+  classifier; the owner ran those by hand.
+- `profile-nsys.sh` re-exported the trace sqlite for every stats report
+  (~10 min of instance time). Fixed in the committed script (export once).
+
+**Discussed, not started**
+- Week 1 close-out: TTFT p99 investigation, owner self-check, run-label fix.
+- Weeks-vs-milestones plan structure (ADR likely).
+- Week 2: methodology, concurrency sweep. No new benchmark result this session
+  — the monthly ADR-0001 checkpoint remains overdue.
+
+**Decisions**
+- Reproductions pin the exact image (`CHARON_IMAGE`) rather than the family.
+  Reversible; no ADR.
+- Owner pre-approved installing nsys on the throwaway instance (it turned out
+  to be preinstalled); profiling session kept profiling-only; unprofiled
+  sanity pass dropped.
+- Profiling artifacts live in `benchmarks/profiles/<date>-<name>/`; binaries
+  gitignored. Reversible convention; no ADR.
+- Owner: commits are asked for after a task, not made mid-task.
+
+**Numbers committed**
+- `benchmarks/results/`: none.
+- Diagnostic (profiled, not a result):
+  `benchmarks/profiles/2026-10-06-week1-nsys/`.
+
+**GPU**
+- Used this session: yes — one spot L4 in `us-central1-c`, pinned image
+  `common-cu129-ubuntu-2204-nvidia-580-v20260818`. Approx GPU-hours: 0.53
+  (instance lifetime from GCE timestamps). Teardown verified by cost-check:
+  yes — by the session script and again by hand, and again at end-day.
+
+**Left for next time**
+- See Now → Next actions: run-label fix, TTFT p99 (run 2), Week 1 self-check,
+  plan-structure decision, next profiling step vs Week 2.
 
 ### 2026-08-28 — first GPU measurement session
 
