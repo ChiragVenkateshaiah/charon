@@ -1,0 +1,30 @@
+WARNING: Device-side CUDA Event completion trace is currently enabled.
+         This may increase runtime overhead and the likelihood of false
+         dependencies across CUDA Streams. If you wish to avoid this, please
+         disable the feature with --cuda-event-trace=false.
+WARNING: CPU IP/backtrace sampling not supported, disabling.
+Try the 'nsys status --environment' command to learn more.
+
+WARNING: CPU context switch tracing not supported, disabling.
+Try the 'nsys status --environment' command to learn more.
+
+INFO:     Started server process [1971]
+INFO:     Waiting for application startup.
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights:   4%|▍         | 15/338 [00:00<00:02, 143.50it/s]Loading weights:  18%|█▊        | 61/338 [00:00<00:00, 325.53it/s]Loading weights:  30%|██▉       | 101/338 [00:00<00:00, 351.43it/s]Loading weights:  43%|████▎     | 147/338 [00:00<00:00, 392.02it/s]Loading weights:  58%|█████▊    | 195/338 [00:00<00:00, 420.83it/s]Loading weights:  71%|███████▏  | 241/338 [00:00<00:00, 432.98it/s]Loading weights:  84%|████████▍ | 285/338 [00:00<00:00, 423.76it/s]Loading weights:  97%|█████████▋| 329/338 [00:00<00:00, 421.64it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 406.41it/s]
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:41316 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41330 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41344 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34956 - "POST /generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34960 - "POST /generate HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1971]
+Collecting data...
+Generating '/tmp/nsys-report-e903.qdstrm'
+[1/1] [0%                          ] trace.nsys-rep[1/1] [0%                          ] trace.nsys-rep[1/1] [0%                          ] trace.nsys-rep[1/1] [5%                          ] trace.nsys-rep[1/1] [6%                          ] trace.nsys-rep[1/1] [7%                          ] trace.nsys-rep[1/1] [8%                          ] trace.nsys-rep[1/1] [9%                          ] trace.nsys-rep[1/1] [10%                         ] trace.nsys-rep[1/1] [11%                         ] trace.nsys-rep[1/1] [12%                         ] trace.nsys-rep[1/1] [13%                         ] trace.nsys-rep[1/1] [14%                         ] trace.nsys-rep[1/1] [=15%                        ] trace.nsys-rep[1/1] [=16%                        ] trace.nsys-rep[1/1] [=17%                        ] trace.nsys-rep[1/1] [==18%                       ] trace.nsys-rep[1/1] [==19%                       ] trace.nsys-rep[1/1] [==20%                       ] trace.nsys-rep[1/1] [==21%                       ] trace.nsys-rep[1/1] [===22%                      ] trace.nsys-rep[1/1] [===23%                      ] trace.nsys-rep[1/1] [===24%                      ] trace.nsys-rep[1/1] [====25%                     ] trace.nsys-rep[1/1] [====26%                     ] trace.nsys-rep[1/1] [====27%                     ] trace.nsys-rep[1/1] [====28%                     ] trace.nsys-rep[1/1] [=====29%                    ] trace.nsys-rep[1/1] [=====30%                    ] trace.nsys-rep[1/1] [=====31%                    ] trace.nsys-rep[1/1] [=====32%                    ] trace.nsys-rep[1/1] [======33%                   ] trace.nsys-rep[1/1] [======34%                   ] trace.nsys-rep[1/1] [======35%                   ] trace.nsys-rep[1/1] [=======36%                  ] trace.nsys-rep[1/1] [=======37%                  ] trace.nsys-rep[1/1] [=======38%                  ] trace.nsys-rep[1/1] [=======39%                  ] trace.nsys-rep[1/1] [========40%                 ] trace.nsys-rep[1/1] [========41%                 ] trace.nsys-rep[1/1] [========42%                 ] trace.nsys-rep[1/1] [=========43%                ] trace.nsys-rep[1/1] [=========44%                ] trace.nsys-rep[1/1] [=========45%                ] trace.nsys-rep[1/1] [=========46%                ] trace.nsys-rep[1/1] [==========47%               ] trace.nsys-rep[1/1] [==========48%               ] trace.nsys-rep[1/1] [==========49%               ] trace.nsys-rep[1/1] [===========50%              ] trace.nsys-rep[1/1] [===========51%              ] trace.nsys-rep[1/1] [===========52%              ] trace.nsys-rep[1/1] [===========53%              ] trace.nsys-rep[1/1] [============54%             ] trace.nsys-rep[1/1] [============55%             ] trace.nsys-rep[1/1] [============56%             ] trace.nsys-rep[1/1] [============57%             ] trace.nsys-rep[1/1] [=============58%            ] trace.nsys-rep[1/1] [=============59%            ] trace.nsys-rep[1/1] [=============60%            ] trace.nsys-rep[1/1] [==============61%           ] trace.nsys-rep[1/1] [==============62%           ] trace.nsys-rep[1/1] [==============63%           ] trace.nsys-rep[1/1] [==============64%           ] trace.nsys-rep[1/1] [===============65%          ] trace.nsys-rep[1/1] [===============66%          ] trace.nsys-rep[1/1] [===============67%          ] trace.nsys-rep[1/1] [================68%         ] trace.nsys-rep[1/1] [================69%         ] trace.nsys-rep[1/1] [================70%         ] trace.nsys-rep[1/1] [================71%         ] trace.nsys-rep[1/1] [=================72%        ] trace.nsys-rep[1/1] [=================73%        ] trace.nsys-rep[1/1] [=================74%        ] trace.nsys-rep[1/1] [==================75%       ] trace.nsys-rep[1/1] [==================76%       ] trace.nsys-rep[1/1] [==================77%       ] trace.nsys-rep[1/1] [========================100%] trace.nsys-rep[1/1] [========================100%] trace.nsys-rep
+Generated:
+	/home/chirag/prof/smoke/trace.nsys-rep

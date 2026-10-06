@@ -1,0 +1,16 @@
+{
+  "mode": "full",
+  "warmup": 20,
+  "requests": 30,
+  "runs": 1,
+  "output_tokens": 128,
+  "t_start": "2026-10-06T16:14:23Z",
+  "t_requests_start": "2026-10-06T16:14:33Z",
+  "t_requests_end": "2026-10-06T16:19:16Z",
+  "t_end": "2026-10-06T16:22:16Z",
+  "nsys": "/usr/local/cuda/bin/nsys",
+  "profile_cmd": "/usr/local/cuda/bin/nsys profile --trace=cuda,nvtx,osrt --force-overwrite=true --output=/home/chirag/prof/full/trace --sample=process-tree --cpuctxsw=process-tree --python-sampling=true --cuda-memory-usage=false .venv/bin/python -m uvicorn serving.naive_server:app --port 8000",
+  "server_cmd": ".venv/bin/python -m uvicorn serving.naive_server:app --port 8000",
+  "runner_cmd": ".venv/bin/python benchmarks/baseline_runner.py --warmup 20 --requests 30 --runs 1 --output-tokens 128 --out /home/chirag/prof/full/runner.json",
+  "git_rev": "decbdf3de1a4c595d604ae65ae5c4e73fd023c8a-dirty"
+}

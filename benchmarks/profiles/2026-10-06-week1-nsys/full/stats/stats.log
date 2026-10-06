@@ -1,0 +1,24 @@
+Generating SQLite file /home/chirag/prof/full/trace.sqlite from /home/chirag/prof/full/trace.nsys-rep
+Processing [/home/chirag/prof/full/trace.sqlite] with [/usr/local/cuda-12.9/nsight-systems-2025.1.3/host-linux-x64/reports/cuda_api_sum.py] to [/home/chirag/prof/full/stats/cuda_api_sum_cuda_api_sum.csv]... PROCESSED
+
+Generating SQLite file /home/chirag/prof/full/trace.sqlite from /home/chirag/prof/full/trace.nsys-rep
+Processing [/home/chirag/prof/full/trace.sqlite] with [/usr/local/cuda-12.9/nsight-systems-2025.1.3/host-linux-x64/reports/cuda_gpu_kern_sum.py] to [/home/chirag/prof/full/stats/cuda_gpu_kern_sum_cuda_gpu_kern_sum.csv]... PROCESSED
+
+Generating SQLite file /home/chirag/prof/full/trace.sqlite from /home/chirag/prof/full/trace.nsys-rep
+Processing [/home/chirag/prof/full/trace.sqlite] with [/usr/local/cuda-12.9/nsight-systems-2025.1.3/host-linux-x64/reports/cuda_kern_exec_sum.py] to [/home/chirag/prof/full/stats/cuda_kern_exec_sum_cuda_kern_exec_sum.csv]... PROCESSED
+
+Generating SQLite file /home/chirag/prof/full/trace.sqlite from /home/chirag/prof/full/trace.nsys-rep
+Processing [/home/chirag/prof/full/trace.sqlite] with [/usr/local/cuda-12.9/nsight-systems-2025.1.3/host-linux-x64/reports/cuda_gpu_mem_time_sum.py] to [/home/chirag/prof/full/stats/cuda_gpu_mem_time_sum_cuda_gpu_mem_time_sum.csv]... PROCESSED
+
+Generating SQLite file /home/chirag/prof/full/trace.sqlite from /home/chirag/prof/full/trace.nsys-rep
+Processing [/home/chirag/prof/full/trace.sqlite] with [/usr/local/cuda-12.9/nsight-systems-2025.1.3/host-linux-x64/reports/cuda_gpu_mem_size_sum.py] to [/home/chirag/prof/full/stats/cuda_gpu_mem_size_sum_cuda_gpu_mem_size_sum.csv]... PROCESSED
+
+Generating SQLite file /home/chirag/prof/full/trace.sqlite from /home/chirag/prof/full/trace.nsys-rep
+Processing [/home/chirag/prof/full/trace.sqlite] with [/usr/local/cuda-12.9/nsight-systems-2025.1.3/host-linux-x64/reports/cuda_api_gpu_sum.py] to [/home/chirag/prof/full/stats/cuda_api_gpu_sum_cuda_api_gpu_sum.csv]... PROCESSED
+
+Generating SQLite file /home/chirag/prof/full/trace.sqlite from /home/chirag/prof/full/trace.nsys-rep
+Processing [/home/chirag/prof/full/trace.sqlite] with [/usr/local/cuda-12.9/nsight-systems-2025.1.3/host-linux-x64/reports/osrt_sum.py] to [/home/chirag/prof/full/stats/osrt_sum_osrt_sum.csv]... PROCESSED
+
+Generating SQLite file /home/chirag/prof/full/trace.sqlite from /home/chirag/prof/full/trace.nsys-rep
+Processing [/home/chirag/prof/full/trace.sqlite] with [/usr/local/cuda-12.9/nsight-systems-2025.1.3/host-linux-x64/reports/nvtx_sum.py] to [/home/chirag/prof/full/stats/nvtx_sum_nvtx_sum.csv]... PROCESSED
+

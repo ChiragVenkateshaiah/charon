@@ -1,0 +1,275 @@
+{
+  "note": "Profiled run: absolute times include tracing overhead. Not a benchmark result.",
+  "requests_analyzed": 30,
+  "tokens_analyzed": 3840,
+  "lm_head_signature": {
+    "kernel": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, __nv_bfloat16, __nv_bfloat16, __nv_bfloat16, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const __nv_bfloat16>, cublasGemvTensorStridedBatched<const __nv_bfloat16>, cublasGemvTensorStridedBatched<__nv_bfloat16>, float>>(T13)",
+    "grid": [
+      37984,
+      1,
+      1
+    ]
+  },
+  "per_request_wall_s": {
+    "p50": 5.655739648,
+    "p95": 5.73220224,
+    "p99": 5.767390720000001,
+    "mean": 5.6462677248,
+    "n": 30
+  },
+  "kernels_per_token": 1195.2875,
+  "decode_step": {
+    "count": 3810,
+    "wall_us": {
+      "p50": 41932.157,
+      "p95": 50217.236000000004,
+      "p99": 96628.609,
+      "mean": 44052.01873858268,
+      "n": 3810
+    },
+    "gpu_busy_us": {
+      "p50": 14466.49,
+      "p95": 14498.557,
+      "p99": 14507.118,
+      "mean": 14454.25422808399,
+      "n": 3810
+    },
+    "gpu_busy_fraction": 0.32811786251748604,
+    "kernels": {
+      "p50": 1185,
+      "p95": 1213,
+      "p99": 1213,
+      "mean": 1194.612598425197,
+      "n": 3810
+    },
+    "idle_gaps_per_step": {
+      "p50": 1196,
+      "p95": 1224,
+      "p99": 1224,
+      "mean": 1205.612598425197,
+      "n": 3810
+    },
+    "idle_gap_us": {
+      "p50": 18.72,
+      "p95": 75.167,
+      "p99": 104.991,
+      "mean": 24.549411757867404,
+      "n": 4593384
+    },
+    "idle_total_per_step_us": {
+      "p50": 27478.922000000002,
+      "p95": 35818.737,
+      "p99": 82105.963,
+      "mean": 29597.0800992126,
+      "n": 3810
+    },
+    "gaps_ge_100us_per_step": 14.412335958005249,
+    "gaps_ge_100us_total_share_of_idle": 0.11437762515713144,
+    "launch_to_start_lag_us": {
+      "p50": 1.034,
+      "p95": 166.433,
+      "p99": 1284.81,
+      "mean": 51.83912612419625,
+      "n": 4551474
+    }
+  },
+  "prefill": {
+    "wall_us": {
+      "p50": 48814.086,
+      "p95": 51114.932,
+      "p99": 57363.212,
+      "mean": 49250.0145,
+      "n": 30
+    },
+    "gpu_busy_fraction": 0.3470011837932217,
+    "kernels": {
+      "p50": 1239,
+      "p95": 1239,
+      "p99": 1239,
+      "mean": 1239.0,
+      "n": 30
+    }
+  },
+  "top_kernels": [
+    {
+      "kernel": "internal::gemvx::kernel[6]",
+      "share_of_kernel_time": 0.6347974120209802,
+      "per_token": 112.125,
+      "mean_us": 81.86359080035304
+    },
+    {
+      "kernel": "internal::gemvx::kernel[7]",
+      "share_of_kernel_time": 0.22950185175822654,
+      "per_token": 83.34375,
+      "mean_us": 39.817249406324215
+    },
+    {
+      "kernel": "at::native::elementwise_kernel",
+      "share_of_kernel_time": 0.014849164337561746,
+      "per_token": 112.4453125,
+      "mean_us": 1.9094960165821349
+    },
+    {
+      "kernel": "at::native::reduce_kernel",
+      "share_of_kernel_time": 0.010971895354836305,
+      "per_token": 57.0,
+      "mean_us": 2.7833312774122807
+    },
+    {
+      "kernel": "at::native::unrolled_elementwise_kernel",
+      "share_of_kernel_time": 0.010516472626626512,
+      "per_token": 59.0,
+      "mean_us": 2.577366521009887
+    },
+    {
+      "kernel": "pytorch_flash::flash_fwd_kernel",
+      "share_of_kernel_time": 0.00989446261521986,
+      "per_token": 18.24375,
+      "mean_us": 7.842169021925317
+    },
+    {
+      "kernel": "at::native::vectorized_elementwise_kernel",
+      "share_of_kernel_time": 0.009709387475865102,
+      "per_token": 111.5625,
+      "mean_us": 1.2584376237161532
+    },
+    {
+      "kernel": "at::native::",
+      "share_of_kernel_time": 0.008852964112919791,
+      "per_token": 56.4375,
+      "mean_us": 2.2681879291251383
+    },
+    {
+      "kernel": "at::native::vectorized_elementwise_kernel",
+      "share_of_kernel_time": 0.00746348908890127,
+      "per_token": 84.5546875,
+      "mean_us": 1.2763280452123562
+    },
+    {
+      "kernel": "at::native::elementwise_kernel",
+      "share_of_kernel_time": 0.0070911690886195184,
+      "per_token": 56.0,
+      "mean_us": 1.830998181733631
+    }
+  ],
+  "kernel_time_top2_share": 0.8642992637792067,
+  "kernels_under_5us_share_of_launches": 0.80952643019201,
+  "launch_lag_share_under_5us": 0.727457302842991,
+  "launch_lag_share_over_100us": 0.10655119638165571,
+  "decode_idle_by_preceding_kernel": [
+    {
+      "kernel": "at::native::vectorized_elementwise_kernel",
+      "share_of_decode_idle": 0.36486022174063404
+    },
+    {
+      "kernel": "at::native::elementwise_kernel",
+      "share_of_decode_idle": 0.19465019675100306
+    },
+    {
+      "kernel": "at::native::",
+      "share_of_decode_idle": 0.1540480785491
+    },
+    {
+      "kernel": "internal::gemvx::kernel[7]",
+      "share_of_decode_idle": 0.07541376121399816
+    },
+    {
+      "kernel": "internal::gemvx::kernel[6]",
+      "share_of_decode_idle": 0.05286204995651842
+    },
+    {
+      "kernel": "pytorch_flash::flash_fwd_kernel",
+      "share_of_decode_idle": 0.04765271675703819
+    },
+    {
+      "kernel": "at::native::unrolled_elementwise_kernel",
+      "share_of_decode_idle": 0.03778234055839412
+    },
+    {
+      "kernel": "at::native::reduce_kernel",
+      "share_of_decode_idle": 0.032649433852415484
+    }
+  ],
+  "cuda_api_per_token": [
+    {
+      "api": "cuKernelGetName",
+      "per_token": 1192.75625,
+      "mean_us": 0.18652050528974382,
+      "cpu_ms_per_token": 0.2224734984375
+    },
+    {
+      "api": "cudaLaunchKernel_v7000",
+      "per_token": 1192.75625,
+      "mean_us": 9.074772456084734,
+      "cpu_ms_per_token": 10.823991564322917
+    },
+    {
+      "api": "cudaMemcpyAsync_v3020",
+      "per_token": 11.0703125,
+      "mean_us": 14.036234321336156,
+      "cpu_ms_per_token": 0.15538550026041667
+    },
+    {
+      "api": "cudaStreamSynchronize_v3020",
+      "per_token": 2.0625,
+      "mean_us": 91.86314873737373,
+      "cpu_ms_per_token": 0.18946774427083332
+    },
+    {
+      "api": "cudaMemsetAsync_v3020",
+      "per_token": 1.21875,
+      "mean_us": 11.363461752136752,
+      "cpu_ms_per_token": 0.013849219010416667
+    },
+    {
+      "api": "cudaStreamIsCapturing_v10000",
+      "per_token": 1.046875,
+      "mean_us": 1.6160781094527363,
+      "cpu_ms_per_token": 0.0016918317708333333
+    },
+    {
+      "api": "cuLaunchKernelEx",
+      "per_token": 1.0,
+      "mean_us": 13.75384296875,
+      "cpu_ms_per_token": 0.013753842968749999
+    },
+    {
+      "api": "cuKernelGetFunction",
+      "per_token": 0.875,
+      "mean_us": 0.8031101190476191,
+      "cpu_ms_per_token": 0.0007027213541666666
+    },
+    {
+      "api": "cuLaunchKernel",
+      "per_token": 0.875,
+      "mean_us": 8.380402083333333,
+      "cpu_ms_per_token": 0.007332851822916667
+    },
+    {
+      "api": "cudaLaunchKernelExC_v11060",
+      "per_token": 0.65625,
+      "mean_us": 6.820461904761904,
+      "cpu_ms_per_token": 0.0044759281250000005
+    }
+  ],
+  "memcpy_per_token": {
+    "Host-to-Device": {
+      "per_token": 0.0390625,
+      "mean_us": 0.35733333333333334
+    },
+    "Device-to-Device": {
+      "per_token": 9.0078125,
+      "mean_us": 1.410680080948251
+    },
+    "Device-to-Host": {
+      "per_token": 2.0234375,
+      "mean_us": 1.158937709137709
+    }
+  },
+  "sync_per_token": {
+    "Stream wait sync": {
+      "per_token": 2.0625,
+      "mean_us": 90.95038345959597
+    }
+  }
+}

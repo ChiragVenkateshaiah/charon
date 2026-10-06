@@ -1,0 +1,24 @@
+server up: Qwen/Qwen2.5-1.5B-Instruct on cuda:0. 1 run(s), 20+30 req each, 128 output tokens.
+  run 1: 10/50 (warmup)  last e2e=5.540s tok/s=23.1
+  run 1: 20/50 (warmup)  last e2e=5.545s tok/s=23.1
+  run 1: 30/50 (measured)  last e2e=5.572s tok/s=23.0
+  run 1: 40/50 (measured)  last e2e=5.661s tok/s=22.6
+  run 1: 50/50 (measured)  last e2e=5.729s tok/s=22.4
+WARNING: runs=1: methodology rule 4 wants >=3.
+
+output: /home/chirag/prof/full/runner.json
+
+Charon baseline runner — concurrency 1
+server: Qwen/Qwen2.5-1.5B-Instruct @ 989aa7980  device=cuda:0 dtype=torch.bfloat16  torch=2.13.0+cu130 transformers=5.16.1
+runs: 1 x (20 warmup + 30 measured)  output_tokens=128 (forced)
+
+metric                         p50         p95         p99   spread(p50)
+------------------------------------------------------------------------
+ttft_s                      0.0467      0.0489      0.0550   n/a
+tpot_s                      0.0441      0.0447      0.0450   n/a
+e2e_s                       5.6496      5.7290      5.7642   n/a
+decode_tokens_per_s        22.6560     23.0785     23.2731   n/a
+
+gpu utilization (in-flight): p50 37.0%  p95 38.0%  p99 38.0%  max 39.0%   [846 samples]
+peak vram (server): 3.11 GB   mem.used max (nvidia-smi): 3.57 GB
+
