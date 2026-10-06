@@ -43,6 +43,17 @@ FALLBACK_ZONE="${CHARON_FALLBACK_ZONE:-asia-south1-a}"
 #     --project=deeplearning-platform-release
 IMAGE_FAMILY="${CHARON_IMAGE_FAMILY:-common-cu129-ubuntu-2204-nvidia-580}"
 IMAGE_PROJECT="${CHARON_IMAGE_PROJECT:-deeplearning-platform-release}"
+# A family resolves to its newest image, which GCP rolls forward (driver and
+# libraries can change under you). To reproduce an earlier run's environment,
+# pin the exact image instead; it takes precedence over the family. Deprecated
+# images stay creatable. Week 1 baseline ran on:
+#   CHARON_IMAGE=common-cu129-ubuntu-2204-nvidia-580-v20260818
+IMAGE="${CHARON_IMAGE:-}"
+if [[ -n "${IMAGE}" ]]; then
+  IMAGE_ARGS=(--image="${IMAGE}" --image-project="${IMAGE_PROJECT}")
+else
+  IMAGE_ARGS=(--image-family="${IMAGE_FAMILY}" --image-project="${IMAGE_PROJECT}")
+fi
 BOOT_DISK_SIZE="${CHARON_BOOT_DISK_SIZE:-100GB}"
 
 create_instance() {
@@ -53,8 +64,7 @@ create_instance() {
     --zone="${zone}" \
     --machine-type="${MACHINE_TYPE}" \
     --accelerator="${ACCELERATOR}" \
-    --image-family="${IMAGE_FAMILY}" \
-    --image-project="${IMAGE_PROJECT}" \
+    "${IMAGE_ARGS[@]}" \
     --boot-disk-size="${BOOT_DISK_SIZE}" \
     --boot-disk-auto-delete \
     --provisioning-model=SPOT \

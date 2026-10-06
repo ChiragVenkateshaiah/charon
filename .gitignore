@@ -51,3 +51,9 @@ career/
 # Committed benchmark results are the project's actual deliverable — see
 # adr/0001-measurement-discipline.md. Do not add a blanket ignore for
 # benchmarks/ or benchmarks/results/ here.
+
+# Nsight profiling artifacts — keep summaries/logs/metadata, not the large binaries.
+# The full .nsys-rep and exported sqlite stay local (re-fetchable only by re-running).
+benchmarks/profiles/**/*.nsys-rep
+benchmarks/profiles/**/*.sqlite
+benchmarks/profiles/**/*.sqlite.gz
