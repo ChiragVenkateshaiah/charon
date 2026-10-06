@@ -1,0 +1,795 @@
+<title>Week 1 Decode Trace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: one instrument-panel column. Summary first, then the replayed token,
+   then the evidence charts, then the hypothesis simulator, set apart by a violet rule. */
+:root {
+  --bg: #f3f4f1;
+  --surface: #fcfcfb;
+  --ink: #16181a;
+  --ink-2: #4d5156;
+  --ink-3: #7c8086;
+  --rule: #dfe1dc;
+  --grid: #e9eae6;
+  --accent: #4a3aa7;          /* UI + hypothesis */
+  --accent-soft: #e9e6f7;
+  --k-gemv6: #2a78d6;
+  --k-gemv7: #6da7ec;
+  --k-elementwise: #eb6834;
+  --k-reduce: #1baf7a;
+  --k-attention: #eda100;
+  --k-other: #e87ba4;
+  --cpu: #5d6670;
+  --sync: #e34948;
+  --idle: #c9ccc6;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step--1: 0.8125rem;
+  --step-0: 1rem;
+  --step-1: 1.25rem;
+  --step-2: 1.6rem;
+  --step-3: clamp(1.9rem, 4.2vw, 2.9rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121314; --surface: #1a1b1c; --ink: #f2f3f1; --ink-2: #c3c6c2; --ink-3: #8d9196;
+    --rule: #2c2e30; --grid: #242628; --accent: #9085e9; --accent-soft: #2a2645;
+    --k-gemv6: #3987e5; --k-gemv7: #86b6ef; --k-elementwise: #d95926; --k-reduce: #199e70;
+    --k-attention: #c98500; --k-other: #d55181; --cpu: #a3abb4; --sync: #e66767; --idle: #3a3d40;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121314; --surface: #1a1b1c; --ink: #f2f3f1; --ink-2: #c3c6c2; --ink-3: #8d9196;
+  --rule: #2c2e30; --grid: #242628; --accent: #9085e9; --accent-soft: #2a2645;
+  --k-gemv6: #3987e5; --k-gemv7: #86b6ef; --k-elementwise: #d95926; --k-reduce: #199e70;
+  --k-attention: #c98500; --k-other: #d55181; --cpu: #a3abb4; --sync: #e66767; --idle: #3a3d40;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: var(--step-0); line-height: 1.55; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 64px; display: grid; gap: 56px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.12; }
+h1 { font-size: var(--step-3); font-weight: 700; letter-spacing: -0.01em; max-width: 22ch; }
+h2 { font-size: var(--step-2); font-weight: 600; }
+h3 { font-size: var(--step-1); font-weight: 600; }
+p { margin: 0; max-width: 68ch; color: var(--ink-2); }
+.mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+section { display: grid; gap: 18px; }
+.sec-head { display: grid; gap: 8px; }
+.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 18px; min-width: 0; }
+
+/* provenance chips */
+.chip { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: 0.6875rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 1px 7px; border-radius: 3px; border: 1px solid var(--ink-2); color: var(--ink); white-space: nowrap; vertical-align: 2px; }
+.chip.m { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.chip.d { border-style: solid; }
+.chip.i { border-style: dotted; }
+.chip.h { border-style: dashed; border-color: var(--accent); color: var(--accent); }
+.legend-chips { display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: var(--step--1); color: var(--ink-2); }
+.legend-chips span { display: inline-flex; gap: 6px; align-items: center; }
+
+/* hero */
+header { display: grid; gap: 18px; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.stat { padding: 14px 16px 14px 0; display: grid; gap: 4px; align-content: start; min-width: 0; }
+.stat + .stat { padding-left: 16px; border-left: 1px solid var(--rule); }
+.stat .v { font-family: var(--font-display); font-size: 2rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.stat .l { font-size: var(--step--1); color: var(--ink-2); }
+@media (max-width: 760px) {
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat:nth-child(3) { padding-left: 0; border-left: 0; }
+  .stat:nth-child(n+3) { border-top: 1px solid var(--rule); }
+}
+
+/* timeline */
+.tl-controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+button, select, input[type=range] { font: inherit; }
+.btn { font-family: var(--font-mono); font-size: var(--step--1); padding: 6px 12px; border-radius: 4px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); cursor: pointer; }
+.btn:hover { border-color: var(--ink-3); }
+.btn.primary { background: var(--accent); color: var(--surface); border-color: var(--accent); min-width: 84px; }
+.btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+.btn:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+label.ctl { display: inline-flex; gap: 8px; align-items: center; font-size: var(--step--1); color: var(--ink-2); }
+input[type=range] { accent-color: var(--accent); }
+canvas { display: block; width: 100%; }
+.canvas-box { position: relative; min-width: 0; }
+.lane-note { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; font-size: var(--step--1); color: var(--ink-3); font-family: var(--font-mono); }
+.counters { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.counter { display: grid; gap: 2px; }
+.counter .v { font-family: var(--font-mono); font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.counter .l { font-size: 0.75rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; }
+@media (max-width: 760px) { .counters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.keys { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: var(--step--1); color: var(--ink-2); }
+.key { display: inline-flex; gap: 6px; align-items: center; }
+.sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; flex: none; }
+.sw.idle { background: repeating-linear-gradient(135deg, var(--idle) 0 2px, transparent 2px 5px); border: 1px solid var(--idle); }
+.sw.cpu { background: var(--cpu); }
+.sw.sync { background: transparent; border: 2px solid var(--sync); }
+
+/* chart grid */
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+@media (max-width: 860px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+.chart-title { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; justify-content: space-between; }
+.chart-title h3 { font-size: 1.05rem; }
+.caption { font-size: var(--step--1); color: var(--ink-2); }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { fill: var(--ink-2); font-family: var(--font-mono); font-size: 11px; }
+svg .t-strong { fill: var(--ink); font-weight: 500; }
+svg .gridline { stroke: var(--grid); stroke-width: 1; }
+svg .axis { stroke: var(--rule); stroke-width: 1; }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); }
+th, td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--rule); font-variant-numeric: tabular-nums; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 500; color: var(--ink-3); font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; }
+td { font-family: var(--font-mono); }
+.tbl { overflow-x: auto; }
+details summary { cursor: pointer; font-size: var(--step--1); color: var(--ink-2); }
+
+/* budget bars */
+.bars { display: grid; gap: 16px; }
+.bar-row { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr); gap: 14px; align-items: center; }
+@media (max-width: 640px) { .bar-row { grid-template-columns: minmax(0, 1fr); gap: 6px; } }
+.bar-label { display: grid; gap: 2px; font-size: var(--step--1); }
+.bar-label b { font-weight: 600; color: var(--ink); font-size: 0.95rem; }
+.bar-track { position: relative; height: 34px; }
+.seg { position: absolute; top: 0; bottom: 0; border-radius: 3px; display: flex; align-items: center; padding-inline: 8px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--surface); white-space: nowrap; overflow: hidden; transition: left .5s ease, width .5s ease; }
+.seg.gemv { background: var(--k-gemv6); }
+.seg.other { background: var(--k-elementwise); }
+.seg.idle { background: repeating-linear-gradient(135deg, var(--idle) 0 3px, transparent 3px 7px); border: 1px solid var(--idle); color: var(--ink-2); }
+.seg.floor { background: transparent; border: 2px dashed var(--k-gemv6); color: var(--ink-2); }
+.seg.inferred { outline: 1px dotted var(--ink-3); outline-offset: 2px; }
+.scale { position: relative; height: 18px; font-family: var(--font-mono); font-size: 0.7rem; color: var(--ink-3); }
+.scale span { position: absolute; transform: translateX(-50%); }
+
+/* simulator */
+.sim { border-top: 3px solid var(--accent); padding-top: 28px; }
+.sim-banner { display: flex; gap: 12px; align-items: flex-start; background: var(--accent-soft); border: 1px dashed var(--accent); border-radius: 6px; padding: 12px 14px; }
+.sim-banner p { color: var(--ink); max-width: none; }
+.sim-grid { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 900px) { .sim-grid { grid-template-columns: minmax(0, 1fr); } }
+.levers { display: grid; gap: 18px; align-content: start; }
+.lever { display: grid; gap: 6px; }
+.lever-top { display: flex; justify-content: space-between; gap: 10px; font-size: var(--step--1); }
+.lever-top b { font-weight: 600; }
+.lever small { color: var(--ink-3); font-size: 0.75rem; line-height: 1.4; }
+.lever input[type=range] { width: 100%; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; }
+.seg-ctl { display: flex; flex-wrap: wrap; gap: 6px; }
+.outputs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.out { padding: 12px 14px; display: grid; gap: 2px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); min-width: 0; }
+.out:nth-child(3n) { border-right: 0; }
+.out:nth-last-child(-n+3) { border-bottom: 0; }
+.out .v { font-family: var(--font-display); font-size: 1.55rem; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.out .l { font-size: 0.75rem; color: var(--ink-3); }
+.out .delta { font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent); }
+@media (max-width: 560px) {
+  .outputs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .out:nth-child(3n) { border-right: 1px solid var(--rule); }
+  .out:nth-child(2n) { border-right: 0; }
+  .out:nth-last-child(-n+3) { border-bottom: 1px solid var(--rule); }
+  .out:nth-last-child(-n+2) { border-bottom: 0; }
+}
+.warn { font-size: var(--step--1); color: var(--sync); font-family: var(--font-mono); min-height: 1.4em; }
+ul.assume { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: var(--step--1); color: var(--ink-2); max-width: 80ch; }
+footer { border-top: 1px solid var(--rule); padding-top: 18px; display: grid; gap: 8px; font-size: var(--step--1); color: var(--ink-3); }
+footer code, p code, li code { font-family: var(--font-mono); font-size: 0.85em; }
+
+.tip { position: fixed; z-index: 10; pointer-events: none; background: var(--ink); color: var(--surface); font-family: var(--font-mono); font-size: 0.75rem; line-height: 1.45; padding: 7px 9px; border-radius: 4px; max-width: 260px; }
+@media (prefers-reduced-motion: reduce) { .seg { transition: none; } }
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Charon · Phase 1 · Week 1 naive server · Nsight Systems 2025.1.3 · NVIDIA L4 · traced 2026-10-06</div>
+  <h1>For most of each token, the L4 is waiting for its next kernel</h1>
+  <p>A profiling-only trace of the unchanged Week 1 server: Qwen2.5-1.5B-Instruct in BF16, batch 1, 128 output tokens per request, 30 measured requests (3,810 decode steps). Every figure is tagged with where it came from. The trace slows the server down, so its times describe <em>where</em> a token's time goes and never replace the Week 1 benchmark numbers.</p>
+  <div class="legend-chips" aria-label="Provenance tags">
+    <span><span class="chip m">Measured</span> read from the trace or the Week 1 result</span>
+    <span><span class="chip d">Derived</span> arithmetic on measured values</span>
+    <span><span class="chip i">Inferred</span> reasoned, not directly observed</span>
+    <span><span class="chip h">Hypothetical</span> a what-if, not a result</span>
+  </div>
+  <div class="stats">
+    <div class="stat"><span class="v num">1,195</span><span class="l">kernels launched per token <span class="chip m">Measured</span></span></div>
+    <div class="stat"><span class="v num">32.8%</span><span class="l">of each decode step the GPU is busy, under the profiler <span class="chip m">Measured</span></span></div>
+    <div class="stat"><span class="v num">1.0 µs</span><span class="l">median gap between a launch returning and its kernel starting <span class="chip m">Measured</span></span></div>
+    <div class="stat"><span class="v num">86%</span><span class="l">of GPU time is two cuBLAS GEMV kernels <span class="chip m">Measured</span></span></div>
+  </div>
+</header>
+
+<section id="replay" aria-labelledby="replay-h">
+  <div class="sec-head">
+    <div class="eyebrow">One real token, replayed</div>
+    <h2 id="replay-h">Request 16, decode step 64, kernel by kernel</h2>
+    <p>The top lane is the CPU calling <code>cudaLaunchKernel</code>; the bottom lane is the GPU running each kernel. Thin lines join each launch to its kernel. Upright lines mean the GPU started the kernel the moment the CPU handed it over, because nothing else was queued. The hatched stretches are the GPU idle. Long blue GEMVs let the CPU run ahead for a while, then the run of tiny kernels drains that lead and the GPU waits again. <span class="chip m">Measured</span></p>
+  </div>
+  <div class="panel" style="display:grid; gap:14px;">
+    <div class="tl-controls">
+      <button class="btn primary" id="play" type="button">Pause</button>
+      <button class="btn" id="restart" type="button">Restart</button>
+      <label class="ctl" for="speed">Speed
+        <select id="speed" class="btn">
+          <option value="500">0.5 ms of trace per second</option>
+          <option value="2000" selected>2 ms of trace per second</option>
+          <option value="8000">8 ms of trace per second</option>
+        </select>
+      </label>
+      <label class="ctl" for="zoom">Window <input id="zoom" type="range" min="0" max="100" value="38"> <span id="zoom-v" class="num">1.5 ms</span></label>
+    </div>
+    <div class="canvas-box"><canvas id="overview" aria-label="Whole decode step overview" role="img"></canvas></div>
+    <div class="canvas-box"><canvas id="detail" aria-label="Zoomed window of the decode step following the playhead" role="img"></canvas></div>
+    <div class="lane-note"><span>µs since this step began (the previous token's LM-head GEMV ended)</span><span>scrub: drag either strip</span></div>
+    <div class="counters" aria-live="off">
+      <div class="counter"><span class="v" id="c-t">0 µs</span><span class="l">trace time</span></div>
+      <div class="counter"><span class="v" id="c-k">0 / 1,185</span><span class="l">kernels finished</span></div>
+      <div class="counter"><span class="v" id="c-b">0 µs</span><span class="l">GPU busy so far</span></div>
+      <div class="counter"><span class="v" id="c-i">0 µs</span><span class="l">GPU idle so far</span></div>
+      <div class="counter"><span class="v" id="c-p">–</span><span class="l">busy share so far</span></div>
+    </div>
+    <div class="keys" id="keys"></div>
+  </div>
+</section>
+
+<section aria-labelledby="budget-h">
+  <div class="sec-head">
+    <div class="eyebrow">Where a token's time goes</div>
+    <h2 id="budget-h">About half of Week 1's 29 ms per token is GPU work</h2>
+    <p>The GPU does about the same work per token with or without the profiler: 14.5 ms, nearly all of it GEMV. The profiler only adds CPU time, and that extra time showed up one-for-one as GPU idle. So the step length is set by the host. Without the profiler, the same GPU work inside Week 1's measured 29.0 ms leaves about 14.5 ms of idle per token. That split agrees with the 53% utilization <code>nvidia-smi</code> reported in Week 1.</p>
+  </div>
+  <div class="panel bars" id="budget"></div>
+</section>
+
+<section aria-labelledby="ev-h">
+  <div class="sec-head">
+    <div class="eyebrow">The evidence</div>
+    <h2 id="ev-h">Many tiny launches, a few heavy kernels, and a GPU that waits</h2>
+  </div>
+  <div class="grid2">
+    <div class="panel" style="display:grid; gap:10px;">
+      <div class="chart-title"><h3>Launches versus GPU time</h3><span class="chip m">Measured</span></div>
+      <p class="caption">Two 100% bars by kernel class. Elementwise kernels are most of the launches but a small slice of GPU time; the GEMVs are the reverse.</p>
+      <div id="mix"></div>
+      <details><summary>Table view</summary><div class="tbl"><table id="mix-table"></table></div></details>
+    </div>
+    <div class="panel" style="display:grid; gap:10px;">
+      <div class="chart-title"><h3>Every decode step: wall time and GPU-busy time</h3><span class="chip m">Measured</span></div>
+      <p class="caption">All 3,810 steps in order. GPU-busy time is flat; wall time wanders above it. The gap between the lines is the GPU waiting.</p>
+      <div class="canvas-box"><canvas id="series" aria-label="Wall time and GPU busy time for each of 3,810 decode steps" role="img"></canvas></div>
+      <div class="keys"><span class="key"><span class="sw" style="background:var(--ink-3)"></span>wall time per step</span><span class="key"><span class="sw" style="background:var(--k-gemv6)"></span>GPU busy per step</span></div>
+    </div>
+    <div class="panel" style="display:grid; gap:10px;">
+      <div class="chart-title"><h3>Idle gaps between GPU work</h3><span class="chip m">Measured</span></div>
+      <p class="caption">Every idle gap inside a decode step, on a log scale. About one gap per kernel: the median is 18.7 µs, and gaps of 100 µs or more hold only 11% of idle time.</p>
+      <div id="gaps"></div>
+    </div>
+    <div class="panel" style="display:grid; gap:10px;">
+      <div class="chart-title"><h3>Launch-to-start lag</h3><span class="chip m">Measured</span></div>
+      <p class="caption">Time from <code>cudaLaunchKernel</code> returning to the kernel starting. 73% of kernels start within 5 µs, so nothing was queued and the GPU was waiting. The right-hand hump is kernels queued behind long GEMVs.</p>
+      <div id="lags"></div>
+    </div>
+  </div>
+</section>
+
+<section class="sim" id="sim" aria-labelledby="sim-h">
+  <div class="sec-head">
+    <div class="eyebrow">What could change</div>
+    <h2 id="sim-h">Optimization simulator</h2>
+  </div>
+  <div class="sim-banner"><span class="chip h">Hypothetical</span><p>Nothing in this section was measured. It recombines the measured token budget under stated assumptions, to show what each kind of fix could move and which ceiling it would hit next. Every scenario needs a real run on the L4 before it becomes a number.</p></div>
+  <div class="sim-grid">
+    <div class="panel levers">
+      <div class="presets" role="group" aria-label="Scenario presets">
+        <button class="btn" type="button" data-preset="w1">Week 1</button>
+        <button class="btn" type="button" data-preset="host">No host gaps</button>
+        <button class="btn" type="button" data-preset="floor">+ GEMV at floor</button>
+        <button class="btn" type="button" data-preset="b8">+ batch 8</button>
+      </div>
+      <div class="lever">
+        <div class="lever-top"><label for="l-host"><b>GPU idle per token</b></label><span class="num" id="l-host-v"></span></div>
+        <input id="l-host" type="range" min="0" max="14.5" step="0.1" value="14.5">
+        <small>Time the GPU waits on the host. Week 1 is about 14.5 ms (inferred). Fewer launches per token (fusing kernels, CUDA graphs, compilation) is the kind of change that would shrink it.</small>
+      </div>
+      <div class="lever">
+        <div class="lever-top"><label for="l-gemv"><b>GEMV time per token</b></label><span class="num" id="l-gemv-v"></span></div>
+        <input id="l-gemv" type="range" min="10.3" max="12.5" step="0.05" value="12.5">
+        <small>12.5 ms in the trace (derived). 10.3 ms is the floor for streaming 3.087 GB of weights at the L4's 300 GB/s datasheet bandwidth. Nsight Compute would show how close the kernels already are.</small>
+      </div>
+      <div class="lever">
+        <div class="lever-top"><span><b>Concurrent requests per step</b></span><span class="num" id="l-b-v"></span></div>
+        <div class="seg-ctl" role="group" aria-label="Batch size" id="l-b"></div>
+        <small>Batching reads each weight once for several tokens. Here it is idealized: step time is held constant as the batch grows. Real steps grow with batch size (more KV-cache traffic, bigger kernels), so these rows are an upper bound.</small>
+      </div>
+      <div class="lever">
+        <div class="lever-top"><label for="l-rate"><b>GPU rate for cost</b></label></div>
+        <select id="l-rate" class="btn">
+          <option value="69" selected>₹69/h (observed effective rate)</option>
+          <option value="41.9">₹41.9/h (spot list price, docs/gcp-setup.md)</option>
+        </select>
+        <small>Cost assumes the GPU generates for every billed second. Real cost per token is higher.</small>
+      </div>
+    </div>
+    <div style="display:grid; gap:18px; min-width:0;">
+      <div class="outputs" id="outputs"></div>
+      <div class="panel" style="display:grid; gap:10px;">
+        <div class="chart-title"><h3>One decode step, rebuilt</h3><span class="chip h">Hypothetical</span></div>
+        <div class="bar-track" id="sim-bar"></div>
+        <div class="scale" id="sim-scale"></div>
+        <div class="keys"><span class="key"><span class="sw" style="background:var(--k-gemv6)"></span>GEMV</span><span class="key"><span class="sw" style="background:var(--k-elementwise)"></span>other kernels (held at 2.0 ms)</span><span class="key"><span class="sw idle"></span>GPU idle, waiting on the host</span></div>
+      </div>
+      <div class="panel" style="display:grid; gap:10px;">
+        <div class="chart-title"><h3>Where the scenario lands on the roofline</h3><span class="chip h">Hypothetical</span></div>
+        <p class="caption">L4 datasheet roofs: 300 GB/s memory, 121 TFLOP/s BF16. Arithmetic intensity is about 1 FLOP/byte per request in the batch, because the weights dominate the bytes moved. The filled dot is Week 1 as measured.</p>
+        <div id="roof"></div>
+        <div class="warn" id="roof-warn" role="status"></div>
+      </div>
+    </div>
+  </div>
+  <details open>
+    <summary>Model and assumptions</summary>
+    <ul class="assume">
+      <li>Step time = GPU idle + GEMV + other kernels (2.0 ms, derived from the trace and held fixed).</li>
+      <li>Per-request tokens/s = 1000 ÷ step ms. Total tokens/s = per-request × batch size.</li>
+      <li>Model FLOP/s = 2 × 1.54 B parameters × total tokens/s. Arithmetic intensity ≈ batch × 1 FLOP/byte.</li>
+      <li>Batching is idealized: step time does not grow with batch. That is an upper bound, not a forecast.</li>
+      <li>The Week 1 preset reproduces the measured 34.5 tokens/s at 29.0 ms per token. No other preset has been run.</li>
+    </ul>
+  </details>
+</section>
+
+<footer>
+  <div>Sources: <code>benchmarks/profiles/2026-10-06-week1-nsys/report.md</code>, <code>full/summary.json</code>, <code>full/viz-data.json</code> (from <code>benchmarks/nsys_viz_data.py</code>), and the Week 1 result <code>benchmarks/results/baseline-20260828T172338Z.json</code>.</div>
+  <div>The trace has no CPU call stacks (the VM refused CPU sampling), so it does not show which host layer (Python, the PyTorch dispatcher or the CUDA driver) owns the idle time.</div>
+</footer>
+</div>
+
+<div class="tip" id="tip" hidden></div>
+
+<script id="viz-data" type="application/json">__DATA__</script>
+<script>
+(() => {
+"use strict";
+const D = JSON.parse(document.getElementById("viz-data").textContent);
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const fmt = (v, d = 0) => v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+
+// ---------- measured constants (sources in footer) ----------
+const W1 = { tpot: 28.97, toks: 34.50 };                  // Week 1 result, p50 medians
+const BUSY = 14.466, GEMV = 12.497;                        // trace: GPU busy p50 per step; GEMV per token
+const OTHER = BUSY - GEMV;                                 // derived
+const HOST = W1.tpot - BUSY;                               // inferred unprofiled idle
+const FLOOR = 3.0874 / 300 * 1000;                         // derived: weights / datasheet BW, ms
+const PROF_WALL = 41.932;                                  // trace: decode step wall p50
+const N = 1.54e9, PEAK = 121000, BW = 300;                 // params; GFLOP/s; GB/s
+
+const CLASSES = [
+  ["gemv6", "GEMV, cuBLAS variant 6"], ["gemv7", "GEMV, cuBLAS variant 7"],
+  ["elementwise", "Elementwise (PyTorch)"], ["reduce", "Reductions"],
+  ["attention", "Flash attention"], ["other", "Other kernels"],
+];
+let COL = {};
+function readColors() {
+  const cs = getComputedStyle(document.documentElement);
+  const g = (n) => cs.getPropertyValue(n).trim();
+  COL = { ink: g("--ink"), ink2: g("--ink-2"), ink3: g("--ink-3"), grid: g("--grid"), rule: g("--rule"),
+    surface: g("--surface"), accent: g("--accent"), cpu: g("--cpu"), sync: g("--sync"), idle: g("--idle"),
+    gemv6: g("--k-gemv6"), gemv7: g("--k-gemv7"), elementwise: g("--k-elementwise"), reduce: g("--k-reduce"),
+    attention: g("--k-attention"), other: g("--k-other"), mono: g("--font-mono") };
+}
+readColors();
+
+// ---------- tooltip ----------
+const tip = document.getElementById("tip");
+function showTip(html, x, y) {
+  tip.innerHTML = html; tip.hidden = false;
+  const r = tip.getBoundingClientRect();
+  let left = x + 14, top = y + 14;
+  if (left + r.width > innerWidth - 8) left = x - r.width - 14;
+  if (top + r.height > innerHeight - 8) top = y - r.height - 14;
+  tip.style.left = Math.max(8, left) + "px"; tip.style.top = Math.max(8, top) + "px";
+}
+const hideTip = () => { tip.hidden = true; };
+
+// ---------- svg helper ----------
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function fitCanvas(cv, h) {
+  const w = cv.parentElement.getBoundingClientRect().width;
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv.style.height = h + "px";
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { g, w, h };
+}
+function hatch(g, color) {
+  const p = document.createElement("canvas"); p.width = p.height = 6;
+  const c = p.getContext("2d"); c.strokeStyle = color; c.lineWidth = 1.2;
+  c.beginPath(); c.moveTo(0, 6); c.lineTo(6, 0); c.stroke();
+  return g.createPattern(p, "repeat");
+}
+
+// ---------- keys ----------
+const keys = document.getElementById("keys");
+keys.innerHTML = CLASSES.map(([k, l]) => `<span class="key"><span class="sw" style="background:var(--k-${k})"></span>${l}</span>`).join("")
+  + `<span class="key"><span class="sw cpu"></span>CPU launch call</span><span class="key"><span class="sw idle"></span>GPU idle</span><span class="key"><span class="sw sync"></span>stream sync</span>`;
+
+// =====================================================================
+// 1. Replay
+// =====================================================================
+const S = D.step;
+const K = S.kernels.map((k, i) => ({ s: k[0], e: k[1], c: k[2], i }));
+const L = S.launches.map((l) => ({ s: l[0], e: l[1], k: l[2] }));
+const launchOf = new Map(L.map((l) => [l.k, l]));
+const SY = S.syncs.map((s) => ({ s: s[0], e: s[1] }));
+const CP = S.copies.map((c) => ({ s: c[0], e: c[1] }));
+const T0 = Math.min(0, ...L.map((l) => l.s)) - 60;
+const T1 = Math.max(S.wall_us, ...SY.map((s) => s.e)) + 60;
+// merged GPU-busy intervals within [0, wall]
+const merged = (() => {
+  const iv = K.map((k) => [k.s, k.e]).concat(CP.map((c) => [c.s, c.e])).filter((x) => x[0] >= 0 && x[0] < S.wall_us).sort((a, b) => a[0] - b[0]);
+  const out = [];
+  for (const [s, e] of iv) { if (out.length && s <= out[out.length - 1][1]) out[out.length - 1][1] = Math.max(out[out.length - 1][1], e); else out.push([s, e]); }
+  return out;
+})();
+function busyUpTo(t) { let b = 0; for (const [s, e] of merged) { if (s >= t) break; b += Math.min(e, t) - s; } return b; }
+
+const ov = document.getElementById("overview"), dt = document.getElementById("detail");
+let OV, DT;
+let t = 7000, playing = !reduceMotion, rate = 2000, win = 1500, last = null;
+const zoomEl = document.getElementById("zoom"), zoomV = document.getElementById("zoom-v");
+const zoomFromSlider = (v) => Math.round(300 * Math.pow(10000 / 300, v / 100));
+win = zoomFromSlider(+zoomEl.value);
+
+function sizeCanvases() { OV = fitCanvas(ov, 74); DT = fitCanvas(dt, 190); }
+
+function drawOverview() {
+  const { g, w, h } = OV; g.clearRect(0, 0, w, h);
+  const x = (u) => ((u - T0) / (T1 - T0)) * w;
+  const cpuY = 8, cpuH = 14, gpuY = 30, gpuH = 34;
+  g.fillStyle = hatch(g, COL.idle); g.fillRect(x(0), gpuY, x(S.wall_us) - x(0), gpuH);
+  for (const l of L) { g.globalAlpha = l.s <= t ? 0.9 : 0.25; g.fillStyle = COL.cpu; g.fillRect(x(l.s), cpuY, Math.max(1, x(l.e) - x(l.s)), cpuH); }
+  for (const k of K) { g.globalAlpha = k.s <= t ? 1 : 0.22; g.fillStyle = COL[k.c]; g.fillRect(x(k.s), gpuY, Math.max(1, x(k.e) - x(k.s)), gpuH); }
+  g.globalAlpha = 1;
+  for (const s of SY) { g.strokeStyle = COL.sync; g.lineWidth = 2; g.strokeRect(x(s.s), cpuY - 2, Math.max(3, x(s.e) - x(s.s)), cpuH + 4); }
+  // window brush
+  const a = t - win * 0.7, b = t + win * 0.3;
+  g.strokeStyle = COL.accent; g.lineWidth = 2; g.strokeRect(x(a), 2, Math.max(4, x(b) - x(a)), h - 4);
+  g.fillStyle = COL.accent; g.fillRect(x(t) - 1, 0, 2, h);
+}
+
+function drawDetail() {
+  const { g, w, h } = DT; g.clearRect(0, 0, w, h);
+  const a = t - win * 0.7, b = t + win * 0.3;
+  const padL = 46;
+  const x = (u) => padL + ((u - a) / (b - a)) * (w - padL);
+  const cpuY = 22, cpuH = 26, gpuY = 104, gpuH = 46;
+  g.font = `11px ${COL.mono}`; g.fillStyle = COL.ink3; g.textBaseline = "middle";
+  g.fillText("CPU", 2, cpuY + cpuH / 2); g.fillText("GPU", 2, gpuY + gpuH / 2);
+  // idle hatch on GPU lane inside the step
+  const s0 = Math.max(a, 0), s1 = Math.min(b, S.wall_us);
+  if (s1 > s0) { g.fillStyle = hatch(g, COL.idle); g.fillRect(x(s0), gpuY, x(s1) - x(s0), gpuH); }
+  // ticks
+  const span = b - a, step = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000].find((s) => span / s <= 7) || 5000;
+  g.strokeStyle = COL.grid; g.lineWidth = 1; g.fillStyle = COL.ink3; g.textBaseline = "alphabetic";
+  for (let u = Math.ceil(a / step) * step; u <= b; u += step) {
+    const X = x(u); if (X < padL) continue;
+    g.beginPath(); g.moveTo(X, 12); g.lineTo(X, h - 18); g.stroke();
+    g.textAlign = "center"; g.fillText(fmt(u), X, h - 4);
+  }
+  g.textAlign = "left";
+  // connectors
+  g.lineWidth = 1;
+  for (const k of K) {
+    if (k.e < a || k.s > b) continue; const l = launchOf.get(k.i); if (!l) continue;
+    g.strokeStyle = COL.ink3; g.globalAlpha = k.s <= t ? 0.55 : 0.18;
+    g.beginPath(); g.moveTo(x(l.e), cpuY + cpuH); g.lineTo(x(k.s), gpuY); g.stroke();
+  }
+  // launches
+  for (const l of L) {
+    if (l.e < a || l.s > b) continue;
+    g.globalAlpha = l.s <= t ? 0.95 : 0.25; g.fillStyle = COL.cpu;
+    g.fillRect(x(l.s), cpuY, Math.max(1.5, x(l.e) - x(l.s)), cpuH);
+  }
+  // syncs
+  g.globalAlpha = 1;
+  for (const s of SY) { if (s.e < a || s.s > b) continue; g.strokeStyle = COL.sync; g.lineWidth = 2; g.strokeRect(x(s.s), cpuY - 4, Math.max(4, x(s.e) - x(s.s)), cpuH + 8); }
+  // kernels
+  for (const k of K) {
+    if (k.e < a || k.s > b) continue;
+    g.globalAlpha = k.s <= t ? 1 : 0.22; g.fillStyle = COL[k.c];
+    const X = x(k.s), W = Math.max(1.5, x(k.e) - x(k.s));
+    g.fillRect(X, gpuY, W, gpuH);
+    if (W > 1.5 && k.s <= t) { g.fillStyle = COL.surface; g.globalAlpha = 0.9; g.fillRect(X + W - 1, gpuY, 1, gpuH); }
+  }
+  g.globalAlpha = 1;
+  for (const c of CP) { if (c.e < a || c.s > b) continue; g.fillStyle = COL.ink2; g.fillRect(x(c.s), gpuY + gpuH + 3, Math.max(2, x(c.e) - x(c.s)), 4); }
+  // playhead
+  g.fillStyle = COL.accent; g.fillRect(x(t) - 1, 6, 2, h - 22);
+}
+
+const cT = document.getElementById("c-t"), cK = document.getElementById("c-k"), cB = document.getElementById("c-b"), cI = document.getElementById("c-i"), cP = document.getElementById("c-p");
+function updateCounters() {
+  const tt = Math.max(0, Math.min(t, S.wall_us));
+  const done = K.filter((k) => k.e <= t).length;
+  const b = busyUpTo(tt), i = tt - b;
+  cT.textContent = fmt(t) + " µs"; cK.textContent = `${fmt(done)} / ${fmt(K.length)}`;
+  cB.textContent = fmt(b) + " µs"; cI.textContent = fmt(i) + " µs";
+  cP.textContent = tt > 0 ? (100 * b / tt).toFixed(1) + "%" : "–";
+}
+function render() { drawOverview(); drawDetail(); updateCounters(); }
+
+const playBtn = document.getElementById("play");
+function setPlaying(p) { playing = p; playBtn.textContent = p ? "Pause" : "Play"; last = null; if (p) requestAnimationFrame(loop); }
+function loop(ts) {
+  if (!playing) return;
+  if (last != null) {
+    t += ((ts - last) / 1000) * rate;
+    if (t > T1) t = T0 + 0;
+  }
+  last = ts; render(); requestAnimationFrame(loop);
+}
+playBtn.addEventListener("click", () => setPlaying(!playing));
+document.getElementById("restart").addEventListener("click", () => { t = T0; render(); if (!playing) setPlaying(true); });
+document.getElementById("speed").addEventListener("change", (e) => { rate = +e.target.value; });
+zoomEl.addEventListener("input", () => { win = zoomFromSlider(+zoomEl.value); zoomV.textContent = win >= 1000 ? (win / 1000).toFixed(1) + " ms" : win + " µs"; render(); });
+zoomV.textContent = (win / 1000).toFixed(1) + " ms";
+
+function scrubFrom(cv, which) {
+  let down = false;
+  const toT = (ev) => {
+    const r = cv.getBoundingClientRect(), px = ev.clientX - r.left;
+    if (which === "ov") return T0 + (px / r.width) * (T1 - T0);
+    const a = t - win * 0.7, b = t + win * 0.3, padL = 46;
+    return a + ((px - padL) / (r.width - padL)) * (b - a);
+  };
+  cv.addEventListener("pointerdown", (ev) => { down = true; cv.setPointerCapture(ev.pointerId); if (which === "ov") { t = toT(ev); render(); } });
+  cv.addEventListener("pointermove", (ev) => {
+    if (down && which === "ov") { t = Math.max(T0, Math.min(T1, toT(ev))); render(); return; }
+    if (which === "dt") {
+      const u = toT(ev), r = cv.getBoundingClientRect(), y = ev.clientY - r.top;
+      if (y > 100 && y < 154) {
+        const k = K.find((k) => u >= k.s - 0.3 && u <= k.e + 0.3);
+        if (k) { const l = launchOf.get(k.i); const name = CLASSES.find((c) => c[0] === k.c)[1];
+          showTip(`${name}<br>start ${fmt(k.s, 1)} µs · ${fmt(k.e - k.s, 1)} µs long${l ? `<br>launch→start ${fmt(k.s - l.e, 1)} µs` : ""}`, ev.clientX, ev.clientY); return; }
+        showTip("GPU idle", ev.clientX, ev.clientY); return;
+      }
+      if (y > 14 && y < 52) { const l = L.find((l) => u >= l.s - 0.5 && u <= l.e + 0.5); if (l) { showTip(`cudaLaunchKernel<br>${fmt(l.e - l.s, 1)} µs (profiled)`, ev.clientX, ev.clientY); return; } }
+      hideTip();
+    }
+  });
+  cv.addEventListener("pointerup", () => { down = false; });
+  cv.addEventListener("pointerleave", hideTip);
+}
+scrubFrom(ov, "ov"); scrubFrom(dt, "dt");
+
+// =====================================================================
+// 2. Budget bars
+// =====================================================================
+function budget() {
+  const root = document.getElementById("budget"); root.innerHTML = "";
+  const max = 44;
+  const rows = [
+    { label: "Week 1, no profiler", sub: `${W1.tpot.toFixed(1)} ms per token`, chip: '<span class="chip m">Measured</span> total · <span class="chip i">Inferred</span> split',
+      segs: [["gemv", GEMV, "GEMV " + GEMV.toFixed(1)], ["other", OTHER, OTHER.toFixed(1)], ["idle inferred", HOST, "idle ≈ " + HOST.toFixed(1)]] },
+    { label: "This trace, profiled", sub: `${PROF_WALL.toFixed(1)} ms per step (p50)`, chip: '<span class="chip m">Measured</span>',
+      segs: [["gemv", GEMV, "GEMV " + GEMV.toFixed(1)], ["other", OTHER, OTHER.toFixed(1)], ["idle", PROF_WALL - BUSY, "idle " + (PROF_WALL - BUSY).toFixed(1)]] },
+    { label: "Bandwidth floor", sub: `${FLOOR.toFixed(1)} ms per token`, chip: '<span class="chip d">Derived</span> from the datasheet',
+      segs: [["floor", FLOOR, "3.087 GB ÷ 300 GB/s"]] },
+  ];
+  for (const r of rows) {
+    const row = document.createElement("div"); row.className = "bar-row";
+    row.innerHTML = `<div class="bar-label"><b>${r.label}</b><span class="num">${r.sub}</span><span>${r.chip}</span></div><div class="bar-track"></div>`;
+    const tr = row.querySelector(".bar-track"); let acc = 0;
+    for (const [cls, v, txt] of r.segs) {
+      const s = document.createElement("div"); s.className = "seg " + cls;
+      s.style.left = `calc(${(acc / max) * 100}% + ${acc ? 1 : 0}px)`; s.style.width = `calc(${(v / max) * 100}% - ${acc ? 2 : 0}px)`;
+      s.textContent = (v / max) > 0.06 ? txt : ""; s.title = txt + " ms";
+      tr.appendChild(s); acc += v;
+    }
+    root.appendChild(row);
+  }
+  const sc = document.createElement("div"); sc.className = "bar-row";
+  sc.innerHTML = `<div></div><div class="scale">${[0, 10, 20, 30, 40].map((v) => `<span style="left:${(v / max) * 100}%">${v} ms</span>`).join("")}</div>`;
+  root.appendChild(sc);
+}
+
+// =====================================================================
+// 3. Kernel mix (two 100% bars)
+// =====================================================================
+function mix() {
+  const box = document.getElementById("mix"); box.innerHTML = "";
+  const W = 520, H = 150, x0 = 96, x1 = W - 8;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Share of kernel launches and of GPU kernel time by kernel class" }, box);
+  const rows = [["launch_share", "launches", 22], ["time_share", "GPU time", 86]];
+  for (const [key, label, y] of rows) {
+    el("text", { x: 0, y: y + 21, class: "t-strong" }, svg).textContent = label;
+    let acc = 0;
+    for (const [c, name] of CLASSES) {
+      const v = D.classes[c] ? D.classes[c][key] : 0; if (!v) continue;
+      const xa = x0 + acc * (x1 - x0), wv = v * (x1 - x0);
+      const r = el("rect", { x: xa + (acc ? 1 : 0), y, width: Math.max(0.5, wv - (acc ? 2 : 0)), height: 32, rx: 2, fill: COL[c] }, svg);
+      r.addEventListener("pointermove", (ev) => showTip(`${name}<br>${(v * 100).toFixed(1)}% of ${label}<br>${fmt(D.classes[c].per_token, 0)} per token · mean ${fmt(D.classes[c].mean_us, 1)} µs`, ev.clientX, ev.clientY));
+      r.addEventListener("pointerleave", hideTip);
+      if (v > 0.09) el("text", { x: xa + 6, y: y + 20, fill: COL.surface, style: `fill:${COL.surface}` }, svg).textContent = `${(v * 100).toFixed(0)}%`;
+      acc += v;
+    }
+  }
+  el("text", { x: x0, y: 140 }, svg).textContent = "0%";
+  el("text", { x: x1, y: 140, "text-anchor": "end" }, svg).textContent = "100%";
+  const tb = document.getElementById("mix-table");
+  tb.innerHTML = "<tr><th>Class</th><th>Per token</th><th>Mean µs</th><th>% launches</th><th>% GPU time</th></tr>" +
+    CLASSES.filter(([c]) => D.classes[c]).map(([c, n]) => { const v = D.classes[c];
+      return `<tr><td>${n}</td><td>${fmt(v.per_token, 1)}</td><td>${fmt(v.mean_us, 1)}</td><td>${(v.launch_share * 100).toFixed(1)}</td><td>${(v.time_share * 100).toFixed(1)}</td></tr>`; }).join("");
+}
+
+// =====================================================================
+// 4. Series (canvas)
+// =====================================================================
+const sv = document.getElementById("series"); let SV;
+function series() {
+  SV = fitCanvas(sv, 230); const { g, w, h } = SV; g.clearRect(0, 0, w, h);
+  const padL = 34, padB = 22, top = 8, ymax = 120;
+  const x = (i) => padL + (i / (D.series.length - 1)) * (w - padL - 4);
+  const y = (v) => top + (1 - Math.min(v, ymax) / ymax) * (h - padB - top);
+  g.font = `11px ${COL.mono}`; g.fillStyle = COL.ink3; g.strokeStyle = COL.grid; g.lineWidth = 1;
+  for (const v of [0, 30, 60, 90, 120]) { g.beginPath(); g.moveTo(padL, y(v)); g.lineTo(w - 4, y(v)); g.stroke(); g.textAlign = "right"; g.fillText(v + "", padL - 6, y(v) + 4); }
+  g.textAlign = "left"; g.fillText("ms", 0, top + 8);
+  g.textAlign = "center"; for (const r of [0, 10, 20]) g.fillText("request " + (r + 1), x(r * 127 + 63), h - 6);
+  g.textAlign = "right"; g.fillText("request 30", w - 4, h - 6);
+  g.textAlign = "left";
+  g.strokeStyle = COL.ink3; g.lineWidth = 1; g.globalAlpha = 0.85; g.beginPath();
+  D.series.forEach((p, i) => (i ? g.lineTo(x(i), y(p[0])) : g.moveTo(x(i), y(p[0])))); g.stroke();
+  g.globalAlpha = 1; g.strokeStyle = COL.gemv6; g.lineWidth = 2; g.beginPath();
+  D.series.forEach((p, i) => (i ? g.lineTo(x(i), y(p[1])) : g.moveTo(x(i), y(p[1])))); g.stroke();
+  sv._x = x; sv._padL = padL;
+}
+sv.addEventListener("pointermove", (ev) => {
+  if (!SV) return; const r = sv.getBoundingClientRect(); const px = ev.clientX - r.left;
+  const i = Math.round(((px - sv._padL) / (r.width - sv._padL - 4)) * (D.series.length - 1));
+  if (i < 0 || i >= D.series.length) return hideTip();
+  const [wall, busy] = D.series[i];
+  showTip(`step ${i % 127 + 1} of request ${Math.floor(i / 127) + 1}<br>wall ${fmt(wall / 1000, 2)} ms · busy ${fmt(busy / 1000, 2)} ms<br>GPU busy ${(100 * busy / wall).toFixed(1)}%`, ev.clientX, ev.clientY);
+});
+sv.addEventListener("pointerleave", hideTip);
+
+// =====================================================================
+// 5. Histograms (log x)
+// =====================================================================
+function hist(id, H, opts) {
+  const box = document.getElementById(id); box.innerHTML = "";
+  const W = 520, Hh = 210, padL = 44, padR = 8, padT = 14, padB = 34;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${Hh}`, role: "img", "aria-label": opts.aria }, box);
+  const e = H.edges_us, lo = Math.log10(e[0]), hi = Math.log10(e[e.length - 1]);
+  const x = (u) => padL + ((Math.log10(u) - lo) / (hi - lo)) * (W - padL - padR);
+  const total = H.counts.reduce((a, b) => a + b, 0) + H.under + H.over;
+  const shares = H.counts.map((c) => c / total), mx = Math.max(...shares);
+  const y = (s) => padT + (1 - s / mx) * (Hh - padT - padB);
+  for (const f of [0, 0.5, 1]) { el("line", { x1: padL, x2: W - padR, y1: y(mx * f), y2: y(mx * f), class: "gridline" }, svg);
+    el("text", { x: padL - 6, y: y(mx * f) + 4, "text-anchor": "end" }, svg).textContent = (mx * f * 100).toFixed(0) + "%"; }
+  shares.forEach((s, i) => {
+    if (!H.counts[i]) return;
+    const xa = x(e[i]) + 1, wv = Math.max(1, x(e[i + 1]) - x(e[i]) - 2);
+    const r = el("rect", { x: xa, y: y(s), width: wv, height: Math.max(0.5, Hh - padB - y(s)), rx: 1.5, fill: opts.color(e[i]) }, svg);
+    r.addEventListener("pointermove", (ev) => showTip(`${fmt(e[i], e[i] < 10 ? 1 : 0)}–${fmt(e[i + 1], e[i + 1] < 10 ? 1 : 0)} µs<br>${fmt(H.counts[i])} ${opts.noun} (${(s * 100).toFixed(1)}%)`, ev.clientX, ev.clientY));
+    r.addEventListener("pointerleave", hideTip);
+  });
+  for (const u of [1, 10, 100, 1000, 10000]) { if (u < e[0] || u > e[e.length - 1]) continue;
+    el("line", { x1: x(u), x2: x(u), y1: Hh - padB, y2: Hh - padB + 4, class: "axis" }, svg);
+    el("text", { x: x(u), y: Hh - padB + 16, "text-anchor": "middle" }, svg).textContent = u >= 1000 ? u / 1000 + " ms" : u + " µs"; }
+  el("line", { x1: padL, x2: W - padR, y1: Hh - padB, y2: Hh - padB, class: "axis" }, svg);
+  if (opts.mark) { const [u, label] = opts.mark; el("line", { x1: x(u), x2: x(u), y1: padT - 4, y2: Hh - padB, stroke: COL.accent, "stroke-width": 1.5, "stroke-dasharray": "3 3" }, svg);
+    el("text", { x: x(u) + 5, y: padT + 4, class: "t-strong" }, svg).textContent = label; }
+  if (H.under) el("text", { x: padL, y: Hh - 2 }, svg).textContent = `+${fmt(H.under)} under ${e[0]} µs not shown`;
+}
+
+// =====================================================================
+// 6. Simulator
+// =====================================================================
+const st = { host: HOST, gemv: GEMV, b: 1, rate: 69 };
+const PRESETS = { w1: { host: HOST, gemv: GEMV, b: 1 }, host: { host: 0, gemv: GEMV, b: 1 }, floor: { host: 0, gemv: FLOOR, b: 1 }, b8: { host: 0, gemv: FLOOR, b: 8 } };
+const lHost = document.getElementById("l-host"), lGemv = document.getElementById("l-gemv"), lRate = document.getElementById("l-rate"), lB = document.getElementById("l-b");
+lHost.max = HOST.toFixed(1); lGemv.min = FLOOR.toFixed(2); lGemv.max = GEMV.toFixed(2);
+const BS = [1, 2, 4, 8, 16, 32];
+lB.innerHTML = BS.map((b) => `<button class="btn" type="button" data-b="${b}" aria-pressed="${b === 1}">${b}</button>`).join("");
+lB.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; st.b = +b.dataset.b; sim(); });
+lHost.addEventListener("input", () => { st.host = +lHost.value; sim(); });
+lGemv.addEventListener("input", () => { st.gemv = +lGemv.value; sim(); });
+lRate.addEventListener("change", () => { st.rate = +lRate.value; sim(); });
+document.querySelectorAll("[data-preset]").forEach((b) => b.addEventListener("click", () => { Object.assign(st, PRESETS[b.dataset.preset]); lHost.value = st.host; lGemv.value = st.gemv; sim(true); }));
+
+function compute(s) {
+  const step = s.host + s.gemv + OTHER, per = 1000 / step, agg = per * s.b;
+  return { step, per, agg, busy: (s.gemv + OTHER) / step, ai: s.b * 0.998, gflops: 2 * N * agg / 1e9, cost: (s.rate / (3600 * agg)) * 1e6 };
+}
+const base = compute({ host: HOST, gemv: GEMV, b: 1, rate: 69 });
+let shown = null;
+function sim(animate) {
+  document.getElementById("l-host-v").textContent = st.host.toFixed(1) + " ms";
+  document.getElementById("l-gemv-v").textContent = st.gemv.toFixed(2) + " ms";
+  document.getElementById("l-b-v").textContent = st.b === 1 ? "1 (Week 1)" : st.b + " (idealized)";
+  lB.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", +b.dataset.b === st.b));
+  document.querySelectorAll("[data-preset]").forEach((b) => { const p = PRESETS[b.dataset.preset];
+    b.setAttribute("aria-pressed", Math.abs(p.host - st.host) < 0.05 && Math.abs(p.gemv - st.gemv) < 0.02 && p.b === st.b); });
+  const target = compute(st);
+  const from = shown || target;
+  const dur = animate && !reduceMotion ? 450 : 0, t0 = performance.now();
+  const step = (now) => {
+    const k = dur ? Math.min(1, (now - t0) / dur) : 1, e = 1 - Math.pow(1 - k, 3);
+    const cur = {}; for (const key in target) cur[key] = from[key] + (target[key] - from[key]) * e;
+    drawSim(cur); shown = cur; if (k < 1) requestAnimationFrame(step); else shown = target;
+  };
+  requestAnimationFrame(step);
+}
+function drawSim(r) {
+  const rateLabel = st.rate === 69 ? "₹69/h observed effective rate" : "₹41.9/h spot list price";
+  const baseCost = (st.rate / (3600 * base.agg)) * 1e6;
+  const cells = [
+    ["Per-request tokens/s", fmt(r.per, 1), `${(r.per / base.per).toFixed(2)}× Week 1`],
+    ["Total tokens/s", fmt(r.agg, 0), `${(r.agg / base.agg).toFixed(1)}× Week 1`],
+    ["Time per token", fmt(r.step, 1) + " ms", st.b > 1 ? "per request in the batch" : "per request"],
+    ["GPU busy", (r.busy * 100).toFixed(0) + "%", "of each step"],
+    ["Model GFLOP/s", fmt(r.gflops, 0), `AI ≈ ${fmt(r.ai, 1)} FLOP/byte`],
+    ["₹ per 1M output tokens", "₹" + fmt(r.cost, 0), `${rateLabel}; Week 1 ₹${fmt(baseCost, 0)}`],
+  ];
+  document.getElementById("outputs").innerHTML = cells.map(([l, v, d]) => `<div class="out"><span class="l">${l}</span><span class="v">${v}</span><span class="delta">${d}</span></div>`).join("");
+  // step bar
+  const max = 30, bar = document.getElementById("sim-bar");
+  const segs = [["gemv", st.gemv, "GEMV " + st.gemv.toFixed(1)], ["other", OTHER, OTHER.toFixed(1)], ["idle", st.host, st.host > 0.3 ? "idle " + st.host.toFixed(1) : ""]];
+  if (!bar.children.length) segs.forEach(([c]) => { const d = document.createElement("div"); d.className = "seg " + c; bar.appendChild(d); });
+  let acc = 0; segs.forEach(([c, v, txt], i) => { const d = bar.children[i];
+    d.style.left = `calc(${(acc / max) * 100}% + ${acc ? 1 : 0}px)`; d.style.width = `calc(${(v / max) * 100}% - ${acc && v ? 2 : 0}px)`;
+    d.textContent = v / max > 0.08 ? txt : ""; acc += v; });
+  document.getElementById("sim-scale").innerHTML = [0, 10, 20, 30].map((v) => `<span style="left:${(v / max) * 100}%">${v} ms</span>`).join("");
+  roof(r);
+}
+function roof(r) {
+  const box = document.getElementById("roof");
+  const W = 560, H = 260, padL = 54, padR = 10, padT = 12, padB = 34;
+  const xl = [-0.3, 2.3], yl = [1.5, 5.3];
+  const x = (a) => padL + ((Math.log10(a) - xl[0]) / (xl[1] - xl[0])) * (W - padL - padR);
+  const y = (g) => padT + (1 - (Math.log10(g) - yl[0]) / (yl[1] - yl[0])) * (H - padT - padB);
+  box.innerHTML = "";
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Roofline with the Week 1 point and the scenario point" }, box);
+  for (const a of [1, 10, 100]) { el("line", { x1: x(a), x2: x(a), y1: padT, y2: H - padB, class: "gridline" }, svg); el("text", { x: x(a), y: H - padB + 16, "text-anchor": "middle" }, svg).textContent = a; }
+  for (const g of [100, 1000, 10000, 100000]) { el("line", { x1: padL, x2: W - padR, y1: y(g), y2: y(g), class: "gridline" }, svg); el("text", { x: padL - 6, y: y(g) + 4, "text-anchor": "end" }, svg).textContent = g >= 1000 ? g / 1000 + "k" : g; }
+  el("text", { x: (padL + W) / 2, y: H - 2, "text-anchor": "middle" }, svg).textContent = "arithmetic intensity, FLOP/byte";
+  el("text", { x: 0, y: padT + 2 }, svg).textContent = "GFLOP/s";
+  const ridge = PEAK / BW, a0 = Math.pow(10, xl[0]), a1 = Math.pow(10, xl[1]);
+  const memEnd = Math.min(ridge, a1);
+  el("line", { x1: x(a0), y1: y(BW * a0), x2: x(memEnd), y2: y(BW * memEnd), stroke: COL.ink, "stroke-width": 2 }, svg);
+  if (ridge < a1) el("line", { x1: x(ridge), y1: y(PEAK), x2: x(a1), y2: y(PEAK), stroke: COL.ink, "stroke-width": 2 }, svg);
+  el("text", { x: x(3), y: y(BW * 3) - 8, class: "t-strong", transform: `rotate(-33 ${x(3)} ${y(BW * 3) - 8})` }, svg).textContent = "memory roof 300 GB/s × AI";
+  el("text", { x: W - padR, y: y(PEAK) - 6, "text-anchor": "end", class: "t-strong" }, svg).textContent = "ridge at 403 FLOP/byte (off chart)";
+  el("circle", { cx: x(base.ai), cy: y(base.gflops), r: 6, fill: COL.ink }, svg);
+  el("text", { x: x(base.ai) + 9, y: y(base.gflops) + 16 }, svg).textContent = "Week 1, measured";
+  const inside = r.gflops <= BW * r.ai * 1.0001;
+  el("line", { x1: x(base.ai), y1: y(base.gflops), x2: x(r.ai), y2: y(r.gflops), stroke: COL.accent, "stroke-width": 1.2, "stroke-dasharray": "3 3" }, svg);
+  el("circle", { cx: x(r.ai), cy: y(r.gflops), r: 7, fill: COL.surface, stroke: COL.accent, "stroke-width": 2, "stroke-dasharray": "3 2" }, svg);
+  el("text", { x: x(r.ai) + 10, y: y(r.gflops) - 8, style: `fill:${COL.accent}` }, svg).textContent = `scenario: ${fmt(r.gflops, 0)} GFLOP/s, ${(100 * r.gflops / (BW * r.ai)).toFixed(0)}% of roof`;
+  document.getElementById("roof-warn").textContent = inside ? "" : "This scenario sits above the memory roof, so the model's assumptions break here.";
+}
+
+// =====================================================================
+// boot + theme/resize
+// =====================================================================
+function drawAll() {
+  readColors(); sizeCanvases(); render(); budget(); mix(); series();
+  hist("gaps", D.gaps, { aria: "Histogram of idle gaps in decode steps", noun: "gaps", color: () => COL.ink3, mark: [18.72, "p50 18.7 µs"] });
+  hist("lags", D.lags, { aria: "Histogram of launch-to-start lag", noun: "kernels", color: (u) => (u < 5 ? COL.accent : COL.ink3), mark: [5, "73% start within 5 µs"] });
+  shown = null; sim(false);
+}
+drawAll();
+if (playing) requestAnimationFrame(loop); else playBtn.textContent = "Play";
+let rz; new ResizeObserver(() => { clearTimeout(rz); rz = setTimeout(drawAll, 120); }).observe(document.querySelector(".wrap"));
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", drawAll);
+new MutationObserver(drawAll).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+})();
+</script>
