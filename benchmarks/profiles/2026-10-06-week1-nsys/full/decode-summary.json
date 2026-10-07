@@ -1,0 +1,286 @@
+{
+ "main_thread": "AnyIO worker th",
+ "requests": 30,
+ "decode_steps": 3810,
+ "decode_kernels_total": 4551474,
+ "decode_kernels_per_step": {
+  "p50": 1185.0,
+  "p05": 1185.0,
+  "p95": 1213.0,
+  "mean": 1194.612598425197
+ },
+ "decode_launch_calls_per_step": {
+  "p50": 1185.0,
+  "p05": 1183.0,
+  "p95": 1214.0,
+  "mean": 1194.611811023622
+ },
+ "wall_us": {
+  "p50": 41931.94,
+  "p05": 40871.321,
+  "p95": 50217.236,
+  "mean": 44052.01873858268
+ },
+ "busy_us": {
+  "p50": 14466.489,
+  "p05": 14390.19,
+  "p95": 14498.557,
+  "mean": 14454.254228083988
+ },
+ "idle_us": {
+  "p50": 27479.2905,
+  "p05": 26433.883,
+  "p95": 35819.409,
+  "mean": 29597.764510498688
+ },
+ "n_gaps": {
+  "p50": 1197.0,
+  "p05": 1197.0,
+  "p95": 1225.0,
+  "mean": 1206.612598425197
+ },
+ "max_gap_us": {
+  "p50": 216.767,
+  "p05": 189.247,
+  "p95": 975.771,
+  "mean": 315.3303908136483
+ },
+ "host_in_cuda_api_us": {
+  "p50": 9699.5905,
+  "p05": 9443.968,
+  "p95": 12164.149,
+  "mean": 11334.375883464567
+ },
+ "host_outside_cuda_api_us": {
+  "p50": 32230.8325,
+  "p05": 31352.276,
+  "p95": 35397.241,
+  "mean": 32717.642855118112
+ },
+ "sync_us_per_step": {
+  "p50": 221.413,
+  "p05": 6.738,
+  "p95": 322.344,
+  "mean": 189.79693123359579
+ },
+ "n_sync": {
+  "p50": 2.0,
+  "p05": 1.0,
+  "p95": 3.0,
+  "mean": 2.0015748031496066
+ },
+ "prefill": {
+  "wall_us": {
+   "p50": 48807.295,
+   "p05": 47965.59,
+   "p95": 51114.932,
+   "mean": 49250.0145
+  },
+  "busy_us": {
+   "p50": 17090.433,
+   "p05": 17029.989,
+   "p95": 17147.604,
+   "mean": 17089.81333333333
+  },
+  "kernels": {
+   "p50": 1239.0,
+   "p05": 1239.0,
+   "p95": 1239.0,
+   "mean": 1239.0
+  },
+  "api_us": {
+   "p50": 10448.59,
+   "p05": 10300.953,
+   "p95": 11011.066,
+   "mean": 10523.8379
+  }
+ },
+ "pre_host_us": {
+  "p50": 3268.2805,
+  "min": 3150.433,
+  "max": 4789.475
+ },
+ "post_host_us": {
+  "p50": 1307.8115,
+  "min": 1194.273,
+  "max": 2016.601
+ },
+ "distinct_step_sequences": 4,
+ "top_sequence_share": 0.33018372703412074,
+ "top_sequences": [
+  0.33018372703412074,
+  0.32650918635170606,
+  0.17375328083989502,
+  0.16955380577427823
+ ],
+ "decode_top10": [
+  {
+   "name": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, __nv_bfloat16, __nv_bfloat16, __nv_bfloat16, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)6, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const __nv_bfloat16>, cublasGemvTensorStridedBatched<const __nv_bfloat16>, cublasGemvTensorStridedBatched<__nv_bfloat16>, float>>(T13)",
+   "short": "internal::gemvx::kernel[6]",
+   "calls": 430530,
+   "total_ms": 35192.3263,
+   "pct": 63.974289068180056,
+   "per_token": 113.0
+  },
+  {
+   "name": "std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, __nv_bfloat16, __nv_bfloat16, __nv_bfloat16, float, (bool)0, (bool)1, (bool)1, (bool)0, (int)7, (bool)0, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<const __nv_bfloat16>, cublasGemvTensorStridedBatched<const __nv_bfloat16>, cublasGemvTensorStridedBatched<__nv_bfloat16>, float>>(T13)",
+   "short": "internal::gemvx::kernel[7]",
+   "calls": 320040,
+   "total_ms": 12743.1125,
+   "pct": 23.165037620810498,
+   "per_token": 84.0
+  },
+  {
+   "name": "void at::native::elementwise_kernel<(int)128, (int)4, void at::native::gpu_kernel_impl_nocast<at::native::BinaryFunctor<c10::BFloat16, c10::BFloat16, c10::BFloat16, at::native::binary_internal::MulFunctor<float>>>(at::TensorIteratorBase &, const T1 &)::[lambda(int) (instance 1)]>(int, T3)",
+   "short": "at::native::elementwise_kernel<BinaryFunctor>",
+   "calls": 426720,
+   "total_ms": 811.304184,
+   "pct": 1.4748274367256007,
+   "per_token": 112.0
+  },
+  {
+   "name": "void at::native::reduce_kernel<(int)512, (int)1, at::native::ReduceOp<float, at::native::MeanOps<float, float, float, float>, unsigned int, float, (int)4, (int)4>>(T3)",
+   "short": "at::native::reduce_kernel",
+   "calls": 217170,
+   "total_ms": 601.144396,
+   "pct": 1.0927889515908615,
+   "per_token": 57.0
+  },
+  {
+   "name": "void at::native::unrolled_elementwise_kernel<at::native::direct_copy_kernel_cuda(at::TensorIteratorBase &)::[lambda() (instance 3)]::operator ()() const::[lambda() (instance 7)]::operator ()() const::[lambda(float) (instance 1)], std::array<char *, (unsigned long)2>, (int)4, TrivialOffsetCalculator<(int)1, unsigned int>, TrivialOffsetCalculator<(int)1, unsigned int>, at::native::memory::LoadWithCast<(int)1>, at::native::memory::StoreWithCast<(int)1>>(int, T1, T2, T4, T5, T6, T7)",
+   "short": "at::native::unrolled_elementwise_kernel",
+   "calls": 224790,
+   "total_ms": 579.08563,
+   "pct": 1.0526894747747655,
+   "per_token": 59.0
+  },
+  {
+   "name": "void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<(int)128, (int)128, (int)32, (int)4, (bool)0, (bool)0, cutlass::bfloat16_t, Flash_kernel_traits<(int)128, (int)128, (int)32, (int)4, cutlass::bfloat16_t>>, (bool)0, (bool)0, (bool)0, (bool)0, (bool)0, (bool)1, (bool)0, (bool)0>(pytorch_flash::Flash_fwd_params)",
+   "short": "pytorch_flash::flash_fwd_kernel",
+   "calls": 70056,
+   "total_ms": 549.390993,
+   "pct": 0.9987091475006155,
+   "per_token": 18.38740157480315
+  },
+  {
+   "name": "void at::native::vectorized_elementwise_kernel<(int)4, at::native::CUDAFunctor_add<c10::BFloat16>, std::array<char *, (unsigned long)3>>(int, T2, T3)",
+   "short": "at::native::vectorized_elementwise_kernel<CUDAFunctor>",
+   "calls": 426720,
+   "total_ms": 536.242755,
+   "pct": 0.9748076534254929,
+   "per_token": 112.0
+  },
+  {
+   "name": "void at::native::<unnamed>::CatArrayBatchedCopy<at::native::<unnamed>::OpaqueType<(unsigned int)2>, unsigned int, (int)4, (int)64, (int)64>(T1 *, at::native::<unnamed>::CatArrInputTensorMetadata<T1, T2, T4, T5>, at::native::<unnamed>::TensorSizeStride<T2, (unsigned int)4>, int, T2)",
+   "short": "at::native::",
+   "calls": 213360,
+   "total_ms": 481.30209,
+   "pct": 0.8749338924713032,
+   "per_token": 56.0
+  },
+  {
+   "name": "void at::native::vectorized_elementwise_kernel<(int)4, at::native::BinaryFunctor<c10::BFloat16, c10::BFloat16, c10::BFloat16, at::native::binary_internal::MulFunctor<float>>, std::array<char *, (unsigned long)3>>(int, T2, T3)",
+   "short": "at::native::vectorized_elementwise_kernel<BinaryFunctor>",
+   "calls": 323850,
+   "total_ms": 412.62728,
+   "pct": 0.7500935477555194,
+   "per_token": 85.0
+  },
+  {
+   "name": "void at::native::elementwise_kernel<(int)128, (int)4, void at::native::gpu_kernel_impl_nocast<at::native::neg_kernel_cuda(at::TensorIteratorBase &)::[lambda() (instance 2)]::operator ()() const::[lambda() (instance 9)]::operator ()() const::[lambda(c10::BFloat16) (instance 1)]>(at::TensorIteratorBase &, const T1 &)::[lambda(int) (instance 1)]>(int, T3)",
+   "short": "at::native::elementwise_kernel",
+   "calls": 213360,
+   "total_ms": 389.975851,
+   "pct": 0.7089166998739584,
+   "per_token": 56.0
+  }
+ ],
+ "decode_api": [
+  {
+   "api": "cuKernelGetName",
+   "per_step": 1193.611811023622,
+   "mean_us": 0.18653371326490695,
+   "ms_per_step": 0.22264884330708662
+  },
+  {
+   "api": "cudaLaunchKernel_v7000",
+   "per_step": 1193.611811023622,
+   "mean_us": 9.084209185557148,
+   "ms_per_step": 10.84301937769029
+  },
+  {
+   "api": "cudaMemcpyAsync_v3020",
+   "per_step": 11.000787401574803,
+   "mean_us": 14.055307684966477,
+   "ms_per_step": 0.15461945170603675
+  },
+  {
+   "api": "cudaStreamSynchronize_v3020",
+   "per_step": 2.001574803149606,
+   "mean_us": 94.82380120639917,
+   "ms_per_step": 0.18979693123359578
+  },
+  {
+   "api": "cudaStreamIsCapturing_v10000",
+   "per_step": 1.0,
+   "mean_us": 1.6285448818897637,
+   "ms_per_step": 0.0016285448818897637
+  },
+  {
+   "api": "cuLaunchKernelEx",
+   "per_step": 1.0,
+   "mean_us": 13.745330708661417,
+   "ms_per_step": 0.013745330708661416
+  },
+  {
+   "api": "cudaMemsetAsync_v3020",
+   "per_step": 0.9997375328083989,
+   "mean_us": 13.73546127592544,
+   "ms_per_step": 0.013731856167979001
+  }
+ ],
+ "sync_positions": [
+  [
+   0.0,
+   4846
+  ],
+  [
+   1.0,
+   2751
+  ],
+  [
+   0.3,
+   10
+  ],
+  [
+   0.4,
+   7
+  ],
+  [
+   0.2,
+   6
+  ],
+  [
+   0.1,
+   5
+  ],
+  [
+   0.5,
+   1
+  ]
+ ],
+ "sync_early_us": {
+  "p50": 7.248,
+  "p05": 6.285,
+  "p95": 115.849,
+  "mean": 20.915098461538463
+ },
+ "sync_late_us": {
+  "p50": 227.711,
+  "p05": 156.326,
+  "p95": 295.472,
+  "mean": 225.7961479462014
+ },
+ "sync_early_count": 4875,
+ "sync_late_count": 2751
+}

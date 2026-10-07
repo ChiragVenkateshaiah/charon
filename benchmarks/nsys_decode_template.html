@@ -1,0 +1,486 @@
+<title>Decode Deep Dive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: one instrument-panel column; each numbered section = graph + a "What this shows" note. */
+:root {
+  --bg: #f3f4f1; --surface: #fcfcfb; --ink: #16181a; --ink-2: #4d5156; --ink-3: #7c8086;
+  --rule: #dfe1dc; --grid: #e9eae6; --accent: #4a3aa7; --accent-soft: #e9e6f7;
+  --k0: #2a78d6; --k1: #6da7ec; --k2: #eb6834; --k3: #1baf7a; --k4: #eda100; --k5: #e87ba4; --k6: #008300;
+  --cpu: #5d6670; --sync: #e34948; --idle: #c9ccc6; --note: #eef3fb;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121314; --surface: #1a1b1c; --ink: #f2f3f1; --ink-2: #c3c6c2; --ink-3: #8d9196;
+    --rule: #2c2e30; --grid: #242628; --accent: #9085e9; --accent-soft: #2a2645;
+    --k0: #3987e5; --k1: #86b6ef; --k2: #d95926; --k3: #199e70; --k4: #c98500; --k5: #d55181; --k6: #2f9e2f;
+    --cpu: #a3abb4; --sync: #e66767; --idle: #3a3d40; --note: #1d2430; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121314; --surface: #1a1b1c; --ink: #f2f3f1; --ink-2: #c3c6c2; --ink-3: #8d9196;
+  --rule: #2c2e30; --grid: #242628; --accent: #9085e9; --accent-soft: #2a2645;
+  --k0: #3987e5; --k1: #86b6ef; --k2: #d95926; --k3: #199e70; --k4: #c98500; --k5: #d55181; --k6: #2f9e2f;
+  --cpu: #a3abb4; --sync: #e66767; --idle: #3a3d40; --note: #1d2430; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 1rem; line-height: 1.55; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 64px; display: grid; gap: 52px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.12; }
+h1 { font-size: clamp(1.9rem, 4.2vw, 2.8rem); font-weight: 700; max-width: 24ch; }
+h2 { font-size: 1.55rem; font-weight: 600; }
+h3 { font-size: 1.05rem; font-weight: 600; }
+p { margin: 0; max-width: 70ch; color: var(--ink-2); }
+code { font-family: var(--font-mono); font-size: 0.86em; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+section { display: grid; gap: 16px; }
+.sec-head { display: grid; gap: 8px; }
+.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 18px; min-width: 0; display: grid; gap: 12px; }
+.note { background: var(--note); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; padding: 12px 14px; display: grid; gap: 6px; }
+.note b { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--accent); font-weight: 500; }
+.note p { color: var(--ink); max-width: none; }
+.chip { display: inline-flex; font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--ink-2); color: var(--ink); white-space: nowrap; vertical-align: 2px; }
+.chip.m { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.chip.i { border-style: dotted; }
+.chip.u { border-style: dashed; color: var(--ink-3); border-color: var(--ink-3); }
+.legend-chips { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 0.82rem; color: var(--ink-2); }
+.legend-chips span { display: inline-flex; gap: 6px; align-items: center; }
+
+.meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.meta div { padding: 10px 14px 10px 0; display: grid; gap: 2px; min-width: 0; }
+.meta div + div { padding-left: 14px; border-left: 1px solid var(--rule); }
+.meta .l { font-size: 0.72rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-mono); }
+.meta .v { font-size: 0.92rem; font-family: var(--font-mono); overflow-wrap: anywhere; }
+@media (max-width: 760px) { .meta { grid-template-columns: repeat(2, minmax(0, 1fr)); } .meta div:nth-child(odd) { padding-left: 0; border-left: 0; } .meta div:nth-child(n+3) { border-top: 1px solid var(--rule); } }
+
+.ctl-row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.btn { font-family: var(--font-mono); font-size: 0.8rem; padding: 6px 12px; border-radius: 4px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); cursor: pointer; }
+.btn:hover { border-color: var(--ink-3); }
+.btn.primary { background: var(--accent); color: var(--surface); border-color: var(--accent); min-width: 80px; }
+.btn:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+label.ctl { display: inline-flex; gap: 8px; align-items: center; font-size: 0.8rem; color: var(--ink-2); }
+input[type=range] { accent-color: var(--accent); }
+canvas { display: block; width: 100%; }
+.cbox { position: relative; min-width: 0; }
+.counters { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.counter { display: grid; gap: 1px; }
+.counter .v { font-family: var(--font-mono); font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.counter .l { font-size: 0.7rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; }
+@media (max-width: 760px) { .counters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.keys { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.8rem; color: var(--ink-2); }
+.key { display: inline-flex; gap: 6px; align-items: center; }
+.sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; flex: none; }
+.sw.idle { background: repeating-linear-gradient(135deg, var(--idle) 0 2px, transparent 2px 5px); border: 1px solid var(--idle); }
+.sw.sync { border: 2px solid var(--sync); }
+
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+@media (max-width: 860px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { fill: var(--ink-2); font-family: var(--font-mono); font-size: 11px; }
+svg .strong { fill: var(--ink); font-weight: 500; }
+svg .gl { stroke: var(--grid); stroke-width: 1; }
+svg .ax { stroke: var(--rule); stroke-width: 1; }
+table { border-collapse: collapse; width: 100%; font-size: 0.8rem; }
+th, td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--rule); font-variant-numeric: tabular-nums; vertical-align: top; }
+th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+th { font-weight: 500; color: var(--ink-3); font-family: var(--font-mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; }
+td { font-family: var(--font-mono); }
+td.name { font-size: 0.7rem; overflow-wrap: anywhere; min-width: 220px; color: var(--ink-2); }
+.tbl { overflow-x: auto; }
+details summary { cursor: pointer; font-size: 0.85rem; color: var(--ink-2); }
+
+/* anatomy */
+.anat { display: flex; gap: 2px; height: 64px; align-items: stretch; }
+.blk { position: relative; border-radius: 2px; overflow: hidden; background: repeating-linear-gradient(135deg, var(--idle) 0 2px, transparent 2px 5px); border: 1px solid var(--idle); cursor: pointer; }
+.blk .busy { position: absolute; left: 0; bottom: 0; right: 0; background: var(--k0); }
+.blk.setup .busy { background: var(--k2); }
+.blk.on { outline: 2px solid var(--accent); outline-offset: 1px; z-index: 1; }
+.anat-labels { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-3); }
+.sec-card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 18px; align-items: start; }
+@media (max-width: 760px) { .sec-card { grid-template-columns: minmax(0, 1fr); } }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 0.85rem; }
+.kv dt { color: var(--ink-3); } .kv dd { margin: 0; font-family: var(--font-mono); }
+.seq { display: flex; flex-wrap: wrap; gap: 2px; }
+.seq span { height: 22px; border-radius: 2px; }
+
+.hyp { display: grid; gap: 12px; }
+.h-card { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 14px; border-top: 1px solid var(--rule); padding-top: 12px; }
+.h-rank { font-family: var(--font-display); font-size: 2rem; font-weight: 700; color: var(--accent); line-height: 1; }
+.meter { display: flex; gap: 3px; align-items: center; font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink-2); }
+.meter i { width: 18px; height: 8px; border-radius: 2px; background: var(--grid); display: inline-block; }
+.meter i.on { background: var(--accent); }
+.h-card ul { margin: 4px 0 0; padding-left: 18px; font-size: 0.86rem; color: var(--ink-2); display: grid; gap: 3px; }
+.five { font-family: var(--font-mono); font-size: 0.86rem; display: grid; gap: 8px; }
+.five div { display: grid; grid-template-columns: minmax(160px, 210px) minmax(0, 1fr); gap: 12px; }
+@media (max-width: 640px) { .five div { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+.five b { color: var(--accent); font-weight: 500; }
+footer { border-top: 1px solid var(--rule); padding-top: 16px; font-size: 0.8rem; color: var(--ink-3); display: grid; gap: 6px; }
+.tip { position: fixed; z-index: 10; pointer-events: none; background: var(--ink); color: var(--surface); font-family: var(--font-mono); font-size: 0.74rem; line-height: 1.45; padding: 7px 9px; border-radius: 4px; max-width: 320px; overflow-wrap: anywhere; }
+</style>
+
+<div class="wrap">
+<header style="display:grid; gap:16px;">
+  <div class="eyebrow">Charon · Week 1 naive server · steady-state decode · Nsight Systems trace of 2026-10-06</div>
+  <h1>The GPU finishes each kernel faster than Python can send the next one</h1>
+  <p>Qwen2.5-1.5B-Instruct (BF16) on an NVIDIA L4, batch 1, 128 tokens per request, 30 measured requests. This page explains the trace graph by graph. Times are from a profiled run: GPU kernel times are close to real, but CPU-side times are stretched by the profiler. Use them for patterns and ratios, not as benchmark numbers.</p>
+  <div class="legend-chips">
+    <span><span class="chip m">Measured</span> read from the trace</span>
+    <span><span class="chip">Derived</span> arithmetic on measured values</span>
+    <span><span class="chip i">Inferred</span> reasoned, not observed</span>
+    <span><span class="chip u">Unknown</span> not visible in this capture</span>
+  </div>
+  <div class="meta">
+    <div><span class="l">Nsight Systems</span><span class="v">2025.1.3.140</span></div>
+    <div><span class="l">GPU / driver</span><span class="v">NVIDIA L4 · 580.173.02</span></div>
+    <div><span class="l">PyTorch / CUDA</span><span class="v">2.13.0+cu130 · 13.0</span></div>
+    <div><span class="l">Requests</span><span class="v">20 warmup + 30 measured</span></div>
+    <div><span class="l">Per request</span><span class="v">128 output tokens</span></div>
+    <div><span class="l">Batch / concurrency</span><span class="v">1 / 1</span></div>
+    <div><span class="l">Capture</span><span class="v">4 min 53 s</span></div>
+    <div><span class="l">Decode thread</span><span class="v">AnyIO worker th</span></div>
+  </div>
+</header>
+
+<!-- A -->
+<section aria-labelledby="a-h">
+  <div class="sec-head"><div class="eyebrow">A · Steady-state timeline</div><h2 id="a-h">Ten tokens, live</h2>
+    <p>Request 16, tokens 60 to 69: 11,850 real kernels and their launch calls, replayed slowly. <span class="chip m">Measured</span></p></div>
+  <div class="panel">
+    <div class="ctl-row">
+      <button class="btn primary" id="a-play" type="button">Pause</button>
+      <button class="btn" id="a-restart" type="button">Restart</button>
+      <label class="ctl" for="a-speed">Speed <select id="a-speed" class="btn"><option value="1000">1 ms of trace per second</option><option value="4000" selected>4 ms per second</option><option value="20000">20 ms per second</option></select></label>
+      <label class="ctl" for="a-zoom">Window <input id="a-zoom" type="range" min="0" max="100" value="40"> <span id="a-zoom-v" class="num"></span></label>
+    </div>
+    <div class="cbox"><canvas id="a-ov" role="img" aria-label="Ten-token overview"></canvas></div>
+    <div class="cbox"><canvas id="a-dt" role="img" aria-label="Zoomed window following the playhead"></canvas></div>
+    <div class="counters">
+      <div class="counter"><span class="v" id="a-tok">–</span><span class="l">token</span></div>
+      <div class="counter"><span class="v" id="a-t">–</span><span class="l">trace time</span></div>
+      <div class="counter"><span class="v" id="a-k">–</span><span class="l">kernels run</span></div>
+      <div class="counter"><span class="v" id="a-b">–</span><span class="l">GPU busy so far</span></div>
+      <div class="counter"><span class="v" id="a-p">–</span><span class="l">busy share</span></div>
+    </div>
+    <div class="keys" id="a-keys"></div>
+  </div>
+  <div class="note"><b>What this shows</b>
+    <p>The top lane is the CPU: one grey tick per <code>cudaLaunchKernel</code>. The bottom lane is the GPU: one coloured block per kernel, with hatching where it is idle. The thin lines join each launch to its kernel. Look at three things. First, the CPU lane is never empty, so the CPU is always busy. Second, the GPU lane is mostly hatched. Third, the joining lines are almost vertical, so each kernel starts the moment it is launched. Nothing waits in a queue. The GPU runs one tiny kernel in 1–3 µs, then waits for the CPU to send the next. Only the long blue GEMVs let the CPU get a few kernels ahead. The dashed lines mark token boundaries. Every token has the same shape.</p></div>
+</section>
+
+<!-- B -->
+<section aria-labelledby="b-h">
+  <div class="sec-head"><div class="eyebrow">B · The repeated pattern</div><h2 id="b-h">Anatomy of one token</h2>
+    <p>Token 64, cut into its parts: 64 setup kernels, 28 identical layers of 40 kernels, and one LM-head GEMV. That totals 1,185 kernels. Each block's width is its wall time; the solid fill is the share of that time the GPU is busy. <span class="chip m">Measured</span> times · <span class="chip i">Inferred</span> op names</p></div>
+  <div class="panel">
+    <div class="ctl-row"><button class="btn primary" id="b-play" type="button">Pause</button><span class="eyebrow">click any block to inspect it</span></div>
+    <div class="anat" id="b-anat"></div>
+    <div class="anat-labels"><span>token setup</span><span>28 decoder layers</span><span>LM head</span></div>
+    <div class="sec-card">
+      <dl class="kv" id="b-kv"></dl>
+      <div style="display:grid; gap:8px; min-width:0;"><div class="eyebrow" id="b-seq-t">kernel sequence</div><div class="seq" id="b-seq"></div><div class="keys" id="b-keys"></div></div>
+    </div>
+  </div>
+  <div class="note"><b>What this shows</b>
+    <p>Every layer looks the same. About 1.37 ms of wall time holds only about 0.45 ms of GPU work, and most of that is the seven GEMV projections (q, k, v, o, gate, up, down). The setup block is almost all waiting: 64 tiny kernels for logits processing, argmax and bookkeeping take about 1.57 ms of wall but about 0.12 ms of GPU time. Only the LM head is solid, because it is one long kernel (about 1.83 ms) and the GPU has nothing to wait for. The kernel strip on the right shows why a layer idles: 33 of its 40 kernels are tiny (orange, aqua, magenta, green), and the host needs about 28 µs to send each one.</p></div>
+</section>
+
+<!-- C + D -->
+<section aria-labelledby="c-h">
+  <div class="sec-head"><div class="eyebrow">C · D · CPU activity</div><h2 id="c-h">The CPU sends work slower than the GPU finishes it</h2></div>
+  <div class="grid2">
+    <div class="panel"><h3>Launch interval vs kernel duration <span class="chip m">Measured</span></h3><div id="c-hist"></div>
+      <div class="keys"><span class="key"><span class="sw" style="background:var(--cpu)"></span>time between two kernel launches (CPU)</span><span class="key"><span class="sw" style="background:var(--k0)"></span>kernel run time (GPU)</span></div></div>
+    <div class="panel"><h3>Where one decode step goes <span class="chip m">Measured</span> profiled</h3><div id="d-bars"></div>
+      <div class="keys"><span class="key"><span class="sw" style="background:var(--k6)"></span>thread outside CUDA calls</span><span class="key"><span class="sw" style="background:var(--cpu)"></span>thread inside CUDA calls</span><span class="key"><span class="sw" style="background:var(--k0)"></span>GPU busy</span><span class="key"><span class="sw idle"></span>GPU idle</span></div></div>
+  </div>
+  <div class="note"><b>What this shows</b>
+    <p>Left: the two histograms barely overlap. Most kernels run in 1–3 µs (median 1.7 µs), but the CPU sends one about every 28 µs (median). When the work is shorter than the delivery interval, the GPU must wait, and that is most of the time. Right: the decode thread spends about 9.7 ms per step inside CUDA calls and about 32.2 ms outside them. Each launch call takes about 7 µs of the 28 µs interval. The larger part is host work outside the CUDA runtime: Python and the PyTorch dispatcher <span class="chip i">Inferred</span>. Which of these is larger is <span class="chip u">Unknown</span>, because the VM refused CPU sampling. The profiler stretches these CPU times, so read this as a direction, not a size.</p></div>
+</section>
+
+<!-- E -->
+<section aria-labelledby="e-h">
+  <div class="sec-head"><div class="eyebrow">E · Top kernels</div><h2 id="e-h">Two GEMV kernels do 87% of the GPU work</h2>
+    <p>Share of GPU kernel time inside the 3,810 decode steps. Hover a bar for the exact Nsight name. <span class="chip m">Measured</span></p></div>
+  <div class="panel"><div id="e-bars"></div>
+    <details><summary>Table with exact kernel names</summary><div class="tbl"><table id="e-table"></table></div></details></div>
+  <div class="note"><b>What this shows</b>
+    <p>The two cuBLAS <code>gemvx</code> kernels are the weight projections. Variant 6 runs q, o, gate, up and the LM head; variant 7 runs k, v and down. Together they are 87% of GPU time. The other eight entries are tiny elementwise kernels that each run 1–3 µs but are called about 56–112 times per token. They cost little GPU time but a lot of launches, which is the pattern from section C. If a kernel profiler is used later, the two GEMV variants are where to look.</p></div>
+</section>
+
+<!-- F + G -->
+<section aria-labelledby="f-h">
+  <div class="sec-head"><div class="eyebrow">F · G · Syncs and phases</div><h2 id="f-h">Syncs are small; prefill is just a bigger step</h2></div>
+  <div class="grid2">
+    <div class="panel"><h3>Stream syncs in tokens 60–69 <span class="chip m">Measured</span></h3><div id="f-sync"></div></div>
+    <div class="panel"><h3>Prefill vs steady-state decode <span class="chip m">Measured</span> profiled p50</h3><div id="g-bars"></div></div>
+  </div>
+  <div class="note"><b>What this shows</b>
+    <p>Left: each row is one token, and the red marks are <code>cudaStreamSynchronize</code> calls. There are two per token, always in the same places. A short one (about 7 µs) comes about 0.7 ms in. A longer one (about 228 µs median) comes at the token boundary, where the CPU waits for the LM head to finish and reads the new token back <span class="chip i">Inferred</span>. Together they are about 0.5% of a step, so syncs are not the bottleneck. Right: with a 41–49 token prompt, prefill has almost the same kernel count and busy share as a decode step. It is a slightly larger step, and only 1 of 128.</p></div>
+</section>
+
+<!-- H -->
+<section aria-labelledby="h-h">
+  <div class="sec-head"><div class="eyebrow">H · Roofline connection</div><h2 id="h-h">The kernels come close to the bandwidth roof; the GPU just runs them rarely</h2>
+    <p>Weight bytes from the Qwen2.5-1.5B config, divided by each GEMV's measured duration. <span class="chip">Derived</span>. This is not measured DRAM bandwidth.</p></div>
+  <div class="panel"><div id="h-bw"></div><div id="h-duty"></div></div>
+  <div class="note"><b>What this shows</b>
+    <p>While a big GEMV runs (gate, up, down, LM head), it streams weights at about 250 GB/s, near the L4's 300 GB/s datasheet limit. The small k and v projections reach less, because they are too short to get up to speed. The roofline's 106.5 GB/s average is lower only because the GEMVs run less than half of each token. The bottom bar shows the arithmetic: about 247 GB/s while running, times about 43% of the time running, gives about 106 GB/s. So the 35.5% roofline gap is mostly a duty-cycle effect, caused by the host. Nsight Compute is needed to confirm the per-kernel bandwidth with real counters.</p></div>
+</section>
+
+<!-- I -->
+<section aria-labelledby="i-h">
+  <div class="sec-head"><div class="eyebrow">I · Hypotheses and decision</div><h2 id="i-h">What limits decode, and what to measure next</h2></div>
+  <div class="panel hyp">
+    <div class="h-card"><div class="h-rank">1</div><div><h3>D · CPU/Python orchestration</h3>
+      <div class="meter" aria-label="confidence high"><i class="on"></i><i class="on"></i><i class="on"></i> high that the host sets the pace · medium on how its time splits</div>
+      <ul><li>For: the GPU is idle about 66% of each profiled step, in about 1,197 small gaps. GPU-busy time is constant while wall time varies. 73% of kernels start within 5 µs of being launched. The host sends a kernel about every 28 µs, but only about 7 µs of that is inside the launch call.</li>
+      <li>Against or gaps: no CPU stacks, so the split between Python and the PyTorch dispatcher is unknown. The profiler stretches host time.</li></ul></div></div>
+    <div class="h-card"><div class="h-rank">2</div><div><h3>C · Kernel launch overhead</h3>
+      <div class="meter" aria-label="confidence medium"><i class="on"></i><i class="on"></i><i></i> medium</div>
+      <ul><li>For: about 1,194 launches per token, each a real 7–9 µs call, about 9.7 ms per step inside CUDA calls.</li>
+      <li>Against: it is the smaller part of each 28 µs launch interval, and the profiler inflates exactly this call.</li></ul></div></div>
+    <div class="h-card"><div class="h-rank">3</div><div><h3>B · Memory bandwidth, inside the GEMVs only</h3>
+      <div class="meter" aria-label="confidence medium-low"><i class="on"></i><i></i><i></i> medium-low</div>
+      <ul><li>For: GEMVs are 87% of GPU time, and the big ones reach about 250 GB/s (derived), roughly 83–85% of datasheet.</li>
+      <li>Against: derived, not measured, and it covers only the third of the step when the GPU is busy.</li></ul></div></div>
+    <p>Not ranked: compute (AI ≈ 1, almost no arithmetic), synchronization (about 0.5% of a step), occupancy (unknown without Nsight Compute). The trace does not show Charon as memory-bound or compute-bound as a whole.</p>
+  </div>
+  <div class="panel">
+    <h3>Nsight Compute next? Not yet.</h3>
+    <p>About two-thirds of each profiled token is the GPU waiting on the host, and Nsight Compute only explains the busy third. First, repeat this Nsight Systems trace with CPU sampling enabled. That needs a VM setting changed, with your approval, and about 0.4 GPU-hours (estimated, not measured). It finds who owns the roughly 20 µs per kernel outside the launch call. Then run Nsight Compute on <code>gemvx (int)6</code> (the gate/up instance and the LM-head instance) and <code>gemvx (int)7</code> (the down instance). Collect achieved DRAM bandwidth, memory throughput and L2 hit rate, occupancy, SM throughput, warp stall reasons, FLOP throughput and the roofline chart.</p>
+  </div>
+  <div class="panel five">
+    <div><b>GPU timeline:</b><span>Busy only about 34% of each profiled token, about 1,197 idle gaps per token, the same pattern every token.</span></div>
+    <div><b>Dominant behavior:</b><span>About 1,185 kernels per token sent one by one from one Python thread, about every 28 µs, while most kernels run 1–3 µs.</span></div>
+    <div><b>Most likely bottleneck:</b><span>Host-side orchestration (Python/PyTorch per-kernel overhead plus launch cost) starving the GPU; the GEMVs themselves look bandwidth-limited (derived).</span></div>
+    <div><b>Confidence:</b><span>High that the GPU is host-starved; medium on the host split; medium-low on GEMV bandwidth.</span></div>
+    <div><b>Next experiment:</b><span>Same Nsight Systems trace with CPU sampling on; then Nsight Compute on the gate/up, LM-head and down GEMV instances.</span></div>
+  </div>
+</section>
+
+<footer>
+  <div>Source: Charon repo <code>benchmarks/profiles/2026-10-06-week1-nsys/full/trace.sqlite</code> (read-only). Full write-up: <code>decode-investigation.md</code> next to this page.</div>
+  <div>Profiled run: absolute CPU-side times are inflated by the tracer and are not benchmark results.</div>
+</footer>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script id="pd" type="application/json">__DATA__</script>
+<script>
+(() => {
+"use strict";
+const D = JSON.parse(document.getElementById("pd").textContent);
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const fmt = (v, d = 0) => Number(v).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+const CLS = [["GEMV variant 6", 0], ["GEMV variant 7", 1], ["elementwise", 2], ["reduction", 3], ["flash attention", 4], ["copy / KV-cache cat", 5], ["other", 6]];
+let C = {};
+function colors() {
+  const cs = getComputedStyle(document.documentElement), g = (n) => cs.getPropertyValue(n).trim();
+  C = { ink: g("--ink"), ink2: g("--ink-2"), ink3: g("--ink-3"), grid: g("--grid"), rule: g("--rule"), surface: g("--surface"),
+    accent: g("--accent"), cpu: g("--cpu"), sync: g("--sync"), idle: g("--idle"), mono: g("--font-mono"),
+    k: [0, 1, 2, 3, 4, 5, 6].map((i) => g("--k" + i)) };
+}
+colors();
+const tip = document.getElementById("tip");
+function showTip(h, x, y) { tip.innerHTML = h; tip.hidden = false; const r = tip.getBoundingClientRect();
+  let l = x + 14, t = y + 14; if (l + r.width > innerWidth - 8) l = x - r.width - 14; if (t + r.height > innerHeight - 8) t = y - r.height - 14;
+  tip.style.left = Math.max(8, l) + "px"; tip.style.top = Math.max(8, t) + "px"; }
+const hideTip = () => { tip.hidden = true; };
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, a, p) { const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; }
+function fit(cv, h) { const w = cv.parentElement.getBoundingClientRect().width, dpr = devicePixelRatio || 1;
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv.style.height = h + "px";
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); return { g, w, h }; }
+function hatch(g, col) { const p = document.createElement("canvas"); p.width = p.height = 6; const c = p.getContext("2d");
+  c.strokeStyle = col; c.lineWidth = 1.2; c.beginPath(); c.moveTo(0, 6); c.lineTo(6, 0); c.stroke(); return g.createPattern(p, "repeat"); }
+const keyHTML = CLS.map(([n, i]) => `<span class="key"><span class="sw" style="background:var(--k${i})"></span>${n}</span>`).join("");
+document.getElementById("a-keys").innerHTML = keyHTML + '<span class="key"><span class="sw" style="background:var(--cpu)"></span>CPU launch call</span><span class="key"><span class="sw idle"></span>GPU idle</span><span class="key"><span class="sw sync"></span>stream sync</span>';
+document.getElementById("b-keys").innerHTML = keyHTML;
+
+// ================= A. ten tokens =================
+const TL = D.tl, K = TL.kernels.map((k, i) => ({ s: k[0], e: k[1], c: k[2], i })), LA = TL.launches.map((l) => ({ s: l[0], e: l[1], k: l[2] }));
+const lOf = new Map(LA.map((l) => [l.k, l])), SY = TL.syncs.map((s) => ({ s: s[0], e: s[1] })), B = TL.bounds;
+const T0 = Math.min(0, ...LA.map((l) => l.s)) - 100, T1 = B[B.length - 1] + 400;
+const merged = (() => { const iv = K.map((k) => [k.s, k.e]).sort((a, b) => a[0] - b[0]), o = [];
+  for (const [s, e] of iv) { if (o.length && s <= o[o.length - 1][1]) o[o.length - 1][1] = Math.max(o[o.length - 1][1], e); else o.push([s, e]); } return o; })();
+const busyTo = (t) => { let b = 0; for (const [s, e] of merged) { if (s >= t) break; b += Math.min(e, t) - s; } return b; };
+let at = 5000, aPlay = !RM, aRate = 4000, aWin = 2500, aLast = null, OV, DT;
+const zf = (v) => Math.round(400 * Math.pow(50000 / 400, v / 100));
+const zEl = document.getElementById("a-zoom"), zV = document.getElementById("a-zoom-v");
+const setWin = () => { aWin = zf(+zEl.value); zV.textContent = aWin >= 1000 ? (aWin / 1000).toFixed(1) + " ms" : aWin + " µs"; };
+setWin();
+function drawOV() { const { g, w, h } = OV; g.clearRect(0, 0, w, h); const x = (u) => ((u - T0) / (T1 - T0)) * w;
+  g.fillStyle = hatch(g, C.idle); g.fillRect(x(0), 26, x(B[B.length - 1]) - x(0), 30);
+  g.globalAlpha = 1; for (const l of LA) { g.globalAlpha = l.s <= at ? 0.85 : 0.22; g.fillStyle = C.cpu; g.fillRect(x(l.s), 8, Math.max(0.6, x(l.e) - x(l.s)), 12); }
+  for (const k of K) { g.globalAlpha = k.s <= at ? 1 : 0.22; g.fillStyle = C.k[k.c]; g.fillRect(x(k.s), 26, Math.max(0.6, x(k.e) - x(k.s)), 30); }
+  g.globalAlpha = 1; g.strokeStyle = C.ink3; g.setLineDash([3, 3]); g.lineWidth = 1;
+  B.forEach((b, i) => { g.beginPath(); g.moveTo(x(b), 2); g.lineTo(x(b), h - 2); g.stroke(); });
+  g.setLineDash([]); g.font = `10px ${C.mono}`; g.fillStyle = C.ink3; g.textAlign = "center";
+  for (let i = 0; i < B.length - 1; i++) if (x(B[i + 1]) - x(B[i]) > 34) g.fillText("t" + (60 + i), (x(B[i]) + x(B[i + 1])) / 2, h - 2);
+  for (const s of SY) { g.strokeStyle = C.sync; g.lineWidth = 2; g.strokeRect(x(s.s) - 1, 5, Math.max(3, x(s.e) - x(s.s)) + 2, 18); }
+  const a = at - aWin * 0.7, b = at + aWin * 0.3; g.strokeStyle = C.accent; g.lineWidth = 2; g.strokeRect(x(a), 1, Math.max(4, x(b) - x(a)), h - 12);
+  g.fillStyle = C.accent; g.fillRect(x(at) - 1, 0, 2, h - 10); }
+function drawDT() { const { g, w, h } = DT; g.clearRect(0, 0, w, h); const a = at - aWin * 0.7, b = at + aWin * 0.3, pl = 44;
+  const x = (u) => pl + ((u - a) / (b - a)) * (w - pl), cy = 20, ch = 26, gy = 104, gh = 46;
+  g.font = `11px ${C.mono}`; g.fillStyle = C.ink3; g.textBaseline = "middle"; g.textAlign = "left";
+  g.fillText("CPU", 2, cy + ch / 2); g.fillText("GPU", 2, gy + gh / 2);
+  const s0 = Math.max(a, 0), s1 = Math.min(b, B[B.length - 1]); if (s1 > s0) { g.fillStyle = hatch(g, C.idle); g.fillRect(x(s0), gy, x(s1) - x(s0), gh); }
+  const span = b - a, st = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000].find((s) => span / s <= 7) || 10000;
+  g.strokeStyle = C.grid; g.lineWidth = 1; g.textBaseline = "alphabetic"; g.textAlign = "center"; g.fillStyle = C.ink3;
+  for (let u = Math.ceil(a / st) * st; u <= b; u += st) { const X = x(u); if (X < pl) continue; g.beginPath(); g.moveTo(X, 10); g.lineTo(X, h - 18); g.stroke(); g.fillText(u >= 1000 ? fmt(u / 1000, st < 1000 ? 2 : 0) + " ms" : fmt(u) + " µs", X, h - 4); }
+  g.strokeStyle = C.ink3; g.setLineDash([4, 3]); for (const bb of B) if (bb >= a && bb <= b) { g.beginPath(); g.moveTo(x(bb), 8); g.lineTo(x(bb), h - 18); g.stroke(); } g.setLineDash([]);
+  g.lineWidth = 1; for (const k of K) { if (k.e < a || k.s > b) continue; const l = lOf.get(k.i); if (!l) continue;
+    g.strokeStyle = C.ink3; g.globalAlpha = k.s <= at ? 0.55 : 0.15; g.beginPath(); g.moveTo(x(l.e), cy + ch); g.lineTo(x(k.s), gy); g.stroke(); }
+  for (const l of LA) { if (l.e < a || l.s > b) continue; g.globalAlpha = l.s <= at ? 0.95 : 0.22; g.fillStyle = C.cpu; g.fillRect(x(l.s), cy, Math.max(1.2, x(l.e) - x(l.s)), ch); }
+  g.globalAlpha = 1; for (const s of SY) { if (s.e < a || s.s > b) continue; g.strokeStyle = C.sync; g.lineWidth = 2; g.strokeRect(x(s.s), cy - 4, Math.max(4, x(s.e) - x(s.s)), ch + 8); }
+  for (const k of K) { if (k.e < a || k.s > b) continue; g.globalAlpha = k.s <= at ? 1 : 0.22; g.fillStyle = C.k[k.c]; g.fillRect(x(k.s), gy, Math.max(1.2, x(k.e) - x(k.s)), gh); }
+  g.globalAlpha = 1; g.fillStyle = C.accent; g.fillRect(x(at) - 1, 4, 2, h - 20); }
+const cTok = document.getElementById("a-tok"), cT = document.getElementById("a-t"), cK = document.getElementById("a-k"), cB = document.getElementById("a-b"), cP = document.getElementById("a-p");
+function counters() { const tt = Math.max(0, Math.min(at, B[B.length - 1])); let ti = B.findIndex((b, i) => i < B.length - 1 && tt >= b && tt < B[i + 1]); if (ti < 0) ti = 9;
+  const bz = busyTo(tt); cTok.textContent = 60 + ti; cT.textContent = fmt(tt / 1000, 2) + " ms";
+  cK.textContent = fmt(K.filter((k) => k.e <= at).length); cB.textContent = fmt(bz / 1000, 2) + " ms"; cP.textContent = tt > 0 ? (100 * bz / tt).toFixed(1) + "%" : "–"; }
+const renderA = () => { drawOV(); drawDT(); counters(); };
+const aBtn = document.getElementById("a-play");
+function aSet(p) { aPlay = p; aBtn.textContent = p ? "Pause" : "Play"; aLast = null; if (p) requestAnimationFrame(aLoop); }
+function aLoop(ts) { if (!aPlay) return; if (aLast != null) { at += ((ts - aLast) / 1000) * aRate; if (at > T1) at = T0; } aLast = ts; renderA(); requestAnimationFrame(aLoop); }
+aBtn.onclick = () => aSet(!aPlay);
+document.getElementById("a-restart").onclick = () => { at = T0; renderA(); if (!aPlay) aSet(true); };
+document.getElementById("a-speed").onchange = (e) => { aRate = +e.target.value; };
+zEl.oninput = () => { setWin(); renderA(); };
+(function scrub() { const ov = document.getElementById("a-ov"), dt = document.getElementById("a-dt"); let down = false;
+  ov.addEventListener("pointerdown", (e) => { down = true; ov.setPointerCapture(e.pointerId); const r = ov.getBoundingClientRect(); at = T0 + ((e.clientX - r.left) / r.width) * (T1 - T0); renderA(); });
+  ov.addEventListener("pointermove", (e) => { if (!down) return; const r = ov.getBoundingClientRect(); at = Math.max(T0, Math.min(T1, T0 + ((e.clientX - r.left) / r.width) * (T1 - T0))); renderA(); });
+  ov.addEventListener("pointerup", () => { down = false; });
+  dt.addEventListener("pointermove", (e) => { const r = dt.getBoundingClientRect(), a = at - aWin * 0.7, b = at + aWin * 0.3, pl = 44;
+    const u = a + ((e.clientX - r.left - pl) / (r.width - pl)) * (b - a), y = e.clientY - r.top;
+    if (y > 100 && y < 154) { const k = K.find((k) => u >= k.s - 0.3 && u <= k.e + 0.3);
+      if (k) { const l = lOf.get(k.i); return showTip(`${CLS[k.c][0]}<br>${fmt(k.e - k.s, 1)} µs on the GPU${l ? `<br>started ${fmt(k.s - l.e, 1)} µs after its launch returned` : ""}`, e.clientX, e.clientY); }
+      return showTip("GPU idle: waiting for the next launch", e.clientX, e.clientY); }
+    if (y > 14 && y < 52) { const l = LA.find((l) => u >= l.s - 0.5 && u <= l.e + 0.5); if (l) return showTip(`cudaLaunchKernel<br>${fmt(l.e - l.s, 1)} µs (profiled)`, e.clientX, e.clientY); }
+    hideTip(); });
+  dt.addEventListener("pointerleave", hideTip); })();
+
+// ================= B. anatomy =================
+const T64 = 4, lo64 = B[T64], hi64 = B[T64 + 1];
+const K64 = K.filter((k) => k.s >= lo64 && k.s < hi64).map((k) => ({ s: k.s - lo64, e: k.e - lo64, c: k.c }));
+const SECS = [];
+{ const mk = (name, a, b, endT) => { const ks = K64.slice(a, b); const start = a === 0 ? 0 : ks[0].s;
+    const end = endT != null ? endT : K64[b].s; SECS.push({ name, ks, wall: end - start, busy: ks.reduce((s, k) => s + (k.e - k.s), 0), gemv: ks.filter((k) => k.c < 2).reduce((s, k) => s + (k.e - k.s), 0) }); };
+  mk("Token setup", 0, 64); for (let j = 0; j < 28; j++) mk("Layer " + (j + 1), 64 + 40 * j, 104 + 40 * j); mk("LM head", 1184, 1185, hi64 - lo64); }
+const anat = document.getElementById("b-anat"), totalW = SECS.reduce((s, x) => s + x.wall, 0);
+SECS.forEach((s, i) => { const d = document.createElement("div"); d.className = "blk" + (i === 0 ? " setup" : "");
+  d.style.flex = `${s.wall / totalW} 1 0`; d.innerHTML = `<div class="busy" style="height:${Math.min(100, (100 * s.busy) / s.wall)}%"></div>`;
+  d.onclick = () => { bIdx = i; bSet(false); showSec(i); }; d.title = `${s.name}: ${fmt(s.wall / 1000, 2)} ms wall, ${fmt(s.busy / 1000, 2)} ms GPU`; anat.appendChild(d); });
+const roleNames = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"];
+function showSec(i) { const s = SECS[i]; [...anat.children].forEach((c, j) => c.classList.toggle("on", j === i));
+  const gemvs = s.ks.filter((k) => k.c < 2);
+  document.getElementById("b-kv").innerHTML = `<dt>Section</dt><dd>${s.name}</dd><dt>Kernels</dt><dd>${s.ks.length}</dd><dt>Wall time</dt><dd>${fmt(s.wall, 0)} µs</dd>
+    <dt>GPU busy</dt><dd>${fmt(s.busy, 0)} µs (${(100 * s.busy / s.wall).toFixed(0)}%)</dd><dt>of which GEMV</dt><dd>${fmt(s.gemv, 0)} µs</dd>
+    ${i > 0 && i < 29 ? `<dt>GEMVs</dt><dd>${gemvs.map((k, j) => `${roleNames[j] || "gemv"} ${fmt(k.e - k.s, 0)}`).join(" · ")} µs</dd>` : ""}
+    ${i === 0 ? "<dt>Contains</dt><dd>logits processing, argmax, loop bookkeeping, embedding, rotary setup (inferred)</dd>" : ""}
+    ${i === 29 ? "<dt>Contains</dt><dd>one GEMV over the 151,936-word vocabulary</dd>" : ""}`;
+  document.getElementById("b-seq-t").textContent = `kernel sequence of ${s.name.toLowerCase()} (width = GPU time, min 4 px)`;
+  const mx = Math.max(...s.ks.map((k) => k.e - k.s));
+  document.getElementById("b-seq").innerHTML = s.ks.map((k) => `<span title="${CLS[k.c][0]} ${fmt(k.e - k.s, 1)} µs" style="background:var(--k${k.c}); width:${Math.max(4, Math.round(((k.e - k.s) / Math.max(mx, 1)) * 120))}px"></span>`).join(""); }
+let bIdx = 0, bPlay = !RM, bTimer = null; const bBtn = document.getElementById("b-play");
+function bSet(p) { bPlay = p; bBtn.textContent = p ? "Pause" : "Play"; clearInterval(bTimer); if (p) bTimer = setInterval(() => { bIdx = (bIdx + 1) % SECS.length; showSec(bIdx); }, 900); }
+bBtn.onclick = () => bSet(!bPlay); showSec(0);
+
+// ================= C. histograms =================
+function hists() { const box = document.getElementById("c-hist"); box.innerHTML = ""; const W = 520, H = 230, pl = 40, pr = 8, pt = 12, pb = 34;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Launch interval and kernel duration histograms" }, box);
+  const e = D.intervals.edges, lo = Math.log10(e[0]), hi = Math.log10(e[e.length - 1]);
+  const x = (u) => pl + ((Math.log10(u) - lo) / (hi - lo)) * (W - pl - pr);
+  const sets = [[D.durations, C.k[0], "kernel run time", D.duration_p50], [D.intervals, C.cpu, "launch interval", D.interval_p50]];
+  const mx = Math.max(...sets.map(([h]) => Math.max(...h.counts) / h.n)); const y = (s) => pt + (1 - s / mx) * (H - pt - pb);
+  for (const f of [0, 0.5, 1]) { el("line", { x1: pl, x2: W - pr, y1: y(mx * f), y2: y(mx * f), class: "gl" }, svg); el("text", { x: pl - 5, y: y(mx * f) + 4, "text-anchor": "end" }, svg).textContent = (mx * f * 100).toFixed(0) + "%"; }
+  sets.forEach(([h, col, name, p50], si) => { h.counts.forEach((cnt, i) => { if (!cnt) return; const s = cnt / h.n, x0 = x(e[i]), x1 = x(e[i + 1]), half = (x1 - x0) / 2;
+      const r = el("rect", { x: x0 + 1 + si * half, y: y(s), width: Math.max(1, half - 1), height: Math.max(0.5, H - pb - y(s)), rx: 1, fill: col }, svg);
+      r.addEventListener("pointermove", (ev) => showTip(`${name}<br>${fmt(e[i], e[i] < 10 ? 1 : 0)}–${fmt(e[i + 1], e[i + 1] < 10 ? 1 : 0)} µs: ${(s * 100).toFixed(1)}%`, ev.clientX, ev.clientY)); r.addEventListener("pointerleave", hideTip); });
+    el("line", { x1: x(p50), x2: x(p50), y1: pt, y2: H - pb, stroke: col, "stroke-width": 1.5, "stroke-dasharray": "3 3" }, svg);
+    el("text", { x: x(p50) + 4, y: pt + 10 + si * 14, class: "strong" }, svg).textContent = `median ${fmt(p50, 1)} µs`; });
+  for (const u of [1, 10, 100, 1000]) { el("text", { x: x(u), y: H - pb + 16, "text-anchor": "middle" }, svg).textContent = u >= 1000 ? "1 ms" : u + " µs"; el("line", { x1: x(u), x2: x(u), y1: H - pb, y2: H - pb + 4, class: "ax" }, svg); }
+  el("line", { x1: pl, x2: W - pr, y1: H - pb, y2: H - pb, class: "ax" }, svg); }
+
+// ================= D. step split =================
+function hbars(id, rows, max, unit, aria) { const box = document.getElementById(id); box.innerHTML = ""; const W = 520, rh = 34, pl = 150, H = rows.length * (rh + 14) + 24;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": aria }, box); const x = (v) => pl + (v / max) * (W - pl - 10);
+  rows.forEach((r, i) => { const yy = i * (rh + 14); el("text", { x: 0, y: yy + rh / 2 + 4, class: "strong" }, svg).textContent = r.label; let acc = 0;
+    r.segs.forEach(([v, col, txt, hatched]) => { const rx = x(acc) + (acc ? 1 : 0), ww = Math.max(0.5, x(acc + v) - x(acc) - (acc ? 2 : 0));
+      if (hatched) { el("rect", { x: rx, y: yy, width: ww, height: rh, rx: 2, fill: "none", stroke: C.idle }, svg);
+        const pid = id + "h" + i; const pat = el("pattern", { id: pid, width: 6, height: 6, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, svg); el("line", { x1: 0, y1: 0, x2: 0, y2: 6, stroke: C.idle, "stroke-width": 2 }, pat);
+        el("rect", { x: rx, y: yy, width: ww, height: rh, rx: 2, fill: `url(#${pid})` }, svg); }
+      else el("rect", { x: rx, y: yy, width: ww, height: rh, rx: 2, fill: col }, svg);
+      if (ww > 56) el("text", { x: rx + 6, y: yy + rh / 2 + 4, style: `fill:${hatched ? C.ink2 : C.surface}` }, svg).textContent = txt; acc += v; }); });
+  const yy = rows.length * (rh + 14); for (let v = 0; v <= max; v += max / 4) el("text", { x: x(v), y: yy + 10, "text-anchor": "middle" }, svg).textContent = fmt(v, 0) + unit; }
+function split() { const s = D.summary;
+  hbars("d-bars", [
+    { label: "decode thread", segs: [[s.host_in_cuda_api_us.p50 / 1000, C.cpu, "in CUDA " + fmt(s.host_in_cuda_api_us.p50 / 1000, 1)], [s.host_outside_cuda_api_us.p50 / 1000, C.k[6], "outside CUDA calls " + fmt(s.host_outside_cuda_api_us.p50 / 1000, 1)]] },
+    { label: "GPU", segs: [[s.busy_us.p50 / 1000, C.k[0], "busy " + fmt(s.busy_us.p50 / 1000, 1)], [s.idle_us.p50 / 1000, null, "idle " + fmt(s.idle_us.p50 / 1000, 1), true]] },
+  ], 44, " ms", "Decode thread and GPU time per step"); }
+
+// ================= E. top kernels =================
+function top() { const box = document.getElementById("e-bars"); box.innerHTML = ""; const T = D.summary.decode_top10, W = 560, rh = 22, pl = 240, H = T.length * (rh + 6) + 18;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Top 10 kernels by GPU time" }, box); const x = (v) => pl + (v / 70) * (W - pl - 50);
+  const label = (t) => t.short.replace("internal::gemvx::kernel", "gemvx").replace(/^at::native::$/, "at::native::CatArrayBatchedCopy").replace("at::native::", "");
+  T.forEach((t, i) => { const yy = i * (rh + 6); el("text", { x: 0, y: yy + 15 }, svg).textContent = `${i + 1}. ${label(t)}`.slice(0, 38);
+    const col = i < 2 ? C.k[i] : C.k[2]; const r = el("rect", { x: pl, y: yy, width: Math.max(1, x(t.pct) - pl), height: rh, rx: 2, fill: col }, svg);
+    r.addEventListener("pointermove", (ev) => showTip(`${t.name.replace(/</g, "&lt;")}<br><br>${fmt(t.calls)} calls · ${fmt(t.total_ms, 1)} ms · ${t.pct.toFixed(2)}%`, ev.clientX, ev.clientY)); r.addEventListener("pointerleave", hideTip);
+    el("text", { x: x(t.pct) + 6, y: yy + 15, class: "strong" }, svg).textContent = t.pct.toFixed(1) + "%"; });
+  document.getElementById("e-table").innerHTML = "<tr><th>#</th><th>Exact Nsight name</th><th>Calls</th><th>Total</th><th>%</th><th>Per token</th></tr>" +
+    T.map((t, i) => `<tr><td>${i + 1}</td><td class="name">${t.name.replace(/</g, "&lt;")}</td><td>${fmt(t.calls)}</td><td>${fmt(t.total_ms, 1)} ms</td><td>${t.pct.toFixed(2)}</td><td>${fmt(t.per_token, 1)}</td></tr>`).join(""); }
+
+// ================= F. syncs =================
+function syncs() { const box = document.getElementById("f-sync"); box.innerHTML = ""; const W = 520, rh = 18, pl = 48, H = 10 * (rh + 4) + 30, span = 50000;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Sync calls per token" }, box); const x = (u) => pl + (u / span) * (W - pl - 10);
+  for (let i = 0; i < 10; i++) { const lo = B[i], hi = B[i + 1], yy = i * (rh + 4);
+    el("text", { x: 0, y: yy + 13 }, svg).textContent = "t" + (60 + i);
+    el("rect", { x: pl, y: yy + 7, width: x(hi - lo) - pl, height: 4, rx: 2, fill: C.grid }, svg);
+    for (const s of SY) { if (s.s < lo + 300 || s.s >= hi + 300) continue; const rel = s.s - lo, d = s.e - s.s;
+      const c = el("rect", { x: x(Math.max(0, rel)) - 2, y: yy + 1, width: Math.max(4, x(d) - pl), height: rh - 2, rx: 2, fill: "none", stroke: C.sync, "stroke-width": 2 }, svg);
+      c.addEventListener("pointermove", (ev) => showTip(`cudaStreamSynchronize<br>${fmt(rel / 1000, 2)} ms into token ${60 + i}<br>${fmt(d, 0)} µs`, ev.clientX, ev.clientY)); c.addEventListener("pointerleave", hideTip); } }
+  for (const v of [0, 10, 20, 30, 40, 50]) el("text", { x: x(v * 1000), y: H - 4, "text-anchor": "middle" }, svg).textContent = v + " ms"; }
+
+// ================= G. prefill vs decode =================
+function phases() { const s = D.summary, p = s.prefill; const box = document.getElementById("g-bars"); box.innerHTML = "";
+  const rows = [["wall", p.wall_us.p50 / 1000, s.wall_us.p50 / 1000, " ms"], ["GPU busy", p.busy_us.p50 / 1000, s.busy_us.p50 / 1000, " ms"], ["kernels", p.kernels.p50 / 1000, s.decode_kernels_per_step.p50 / 1000, "k"]];
+  const W = 520, H = 210, pl = 70, svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Prefill vs decode" }, box);
+  rows.forEach(([n, a, b, u], i) => { const yy = i * 64, mx = Math.max(a, b) * 1.15, x = (v) => pl + (v / mx) * (W - pl - 70);
+    el("text", { x: 0, y: yy + 22, class: "strong" }, svg).textContent = n;
+    [[a, C.k[2], "prefill"], [b, C.k[0], "decode"]].forEach(([v, col, lab], j) => { el("rect", { x: pl, y: yy + j * 24, width: x(v) - pl, height: 20, rx: 2, fill: col }, svg);
+      el("text", { x: x(v) + 6, y: yy + j * 24 + 14 }, svg).textContent = `${lab} ${u === "k" ? fmt(v * 1000) : fmt(v, 1) + u}`; }); }); }
+
+// ================= H. bandwidth =================
+function bw() { const box = document.getElementById("h-bw"); box.innerHTML = ""; const R = D.bw, W = 560, rh = 20, pl = 92, H = R.length * (rh + 6) + 34;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Derived weight-streaming rate per GEMV" }, box); const x = (v) => pl + (v / 320) * (W - pl - 70);
+  R.forEach((r, i) => { const yy = i * (rh + 6); el("text", { x: 0, y: yy + 14 }, svg).textContent = r.role;
+    const rect = el("rect", { x: pl, y: yy, width: x(r.gbps) - pl, height: rh, rx: 2, fill: r.role === "lm_head" ? C.k[0] : r.role.match(/k_proj|v_proj|down/) ? C.k[1] : C.k[0] }, svg);
+    rect.addEventListener("pointermove", (ev) => showTip(`${r.role}<br>${fmt(r.mb, 1)} MB of weights in ${fmt(r.us, 1)} µs<br>≈ ${fmt(r.gbps)} GB/s (derived)`, ev.clientX, ev.clientY)); rect.addEventListener("pointerleave", hideTip);
+    el("text", { x: x(r.gbps) + 6, y: yy + 14, class: "strong" }, svg).textContent = fmt(r.gbps) + " GB/s"; });
+  const yb = R.length * (rh + 6);
+  [[300, C.ink, "300 GB/s datasheet"], [106.5, C.accent, "106.5 GB/s token average"]].forEach(([v, col, t], i) => { el("line", { x1: x(v), x2: x(v), y1: -4, y2: yb, stroke: col, "stroke-width": 1.5, "stroke-dasharray": "4 3" }, svg);
+    el("text", { x: x(v), y: yb + 14 + i * 12, "text-anchor": "middle", style: `fill:${col}` }, svg).textContent = t; });
+  const dbox = document.getElementById("h-duty"); dbox.innerHTML = ""; const W2 = 560, H2 = 74, s2 = el("svg", { viewBox: `0 0 ${W2} ${H2}`, role: "img", "aria-label": "Duty cycle reconciliation" }, dbox);
+  const xx = (ms) => 10 + (ms / 29) * (W2 - 20);
+  el("text", { x: 10, y: 12, class: "strong" }, s2).textContent = "One unprofiled Week 1 token, 29.0 ms (inferred split)";
+  el("rect", { x: xx(0), y: 20, width: xx(12.5) - xx(0), height: 26, rx: 2, fill: C.k[0] }, s2);
+  el("text", { x: xx(0) + 6, y: 37, style: `fill:${C.surface}` }, s2).textContent = "GEMV 12.5 ms at ≈ 247 GB/s";
+  const pid = "dutyh"; const pat = el("pattern", { id: pid, width: 6, height: 6, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, s2); el("line", { x1: 0, y1: 0, x2: 0, y2: 6, stroke: C.idle, "stroke-width": 2 }, pat);
+  el("rect", { x: xx(12.5) + 2, y: 20, width: xx(29) - xx(12.5) - 2, height: 26, rx: 2, fill: `url(#${pid})`, stroke: C.idle }, s2);
+  el("text", { x: xx(12.5) + 8, y: 37 }, s2).textContent = "no weight streaming: other kernels + waiting on the host";
+  el("text", { x: 10, y: 66 }, s2).textContent = "247 GB/s × (12.5 ÷ 29.0 = 43%) ≈ 106 GB/s average  →  the roofline's 35.5% of the memory roof"; }
+
+function drawAll() { colors(); OV = fit(document.getElementById("a-ov"), 70); DT = fit(document.getElementById("a-dt"), 186); renderA(); hists(); split(); top(); syncs(); phases(); bw(); }
+drawAll();
+if (aPlay) requestAnimationFrame(aLoop); else aBtn.textContent = "Play";
+if (bPlay) bSet(true); else bBtn.textContent = "Play";
+let rz; new ResizeObserver(() => { clearTimeout(rz); rz = setTimeout(drawAll, 150); }).observe(document.querySelector(".wrap"));
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", drawAll);
+new MutationObserver(drawAll).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+})();
+</script>
