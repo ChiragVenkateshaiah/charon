@@ -14,6 +14,22 @@ whose raw output is committed under `results/`. Harness code is not a result.
   report in `docs/week1-roofline.md`. For a new run, copy the config, point
   `result_file` / `output_svg` at it, and pass its path as the first argument.
   Checks: `python3 -m unittest benchmarks/test_roofline.py`.
+- `profiles/` — Nsight Systems profiling artifacts, one folder per session
+  (`<date>-<name>/`), produced by `scripts/profile-session.sh`. Diagnostic, not
+  results: profiled timings are perturbed by the tracer (ADR-0001). Reports,
+  summaries, stats, env records and logs are committed; the `.nsys-rep` and
+  sqlite exports are gitignored and stay on the machine that fetched them.
+- Nsight trace analysis (stdlib, CPU only; each takes `<profile-dir>/full`):
+  - `nsys_analyze.py` — per-step decode summary → `full/summary.json`. Run it
+    first: it unpacks `trace.sqlite.gz` for the other scripts.
+  - `nsys_viz_data.py` + `nsys_viz_template.html` — one replayed decode step,
+    evidence charts and a hypothesis simulator → `visualization.html`.
+  - `nsys_decode_analysis.py` — steady-state decode deep-dive (kernels per
+    token, top-10 kernels with exact names, host time inside vs outside CUDA
+    calls, syncs, prefill vs decode) → `full/decode-summary.json`. ~10 min.
+  - `nsys_decode_page.py` + `nsys_decode_template.html` — 10 consecutive
+    tokens and the token anatomy, built from `decode-summary.json` →
+    `decode-deep-dive.html`. Run after `nsys_decode_analysis.py`.
 
 ## `baseline_runner.py` — Week 1 concurrency-1 baseline
 
