@@ -1,0 +1,2 @@
+name, driver_version, pci.bus_id, memory.total [MiB], power.limit [W], clocks.max.sm [MHz], clocks.max.memory [MHz], pcie.link.gen.current, pcie.link.width.current, persistence_mode, compute_mode
+NVIDIA L4, 580.173.02, 00000000:00:03.0, 23034 MiB, 72.00 W, 2040 MHz, 6251 MHz, 3, 16, Enabled, Default

@@ -104,8 +104,21 @@ per level. 128 output tokens (`min_tokens = max_tokens`). Prompt set
   ascending with runs consecutive). Decision 10 added (compact JSON; the Week 1 file
   is indented JSON). No sweep has run under the 2026-10-18 text, so no result is
   affected.
+- **2026-10-19 (owner, after the first sweep).** Decision 4 is unchanged, and its
+  value stays the reported throughput. At concurrency 64 the client received
+  completions in bursts, and the decision 4 window overstated throughput (0.295 vs
+  0.265 req/s; `benchmarks/results/2026-10-19-milestone2-sweep.md`). Where that
+  happens, the results file reports the decision 4 value marked as distorted, and
+  beside it the whole-run figure (all requests, including warmup, over first
+  `t_start` to last `t_end`), labelled as such. A fix to decision 4 itself is open
+  (below).
 
 ## Not yet decided
+
+- Throughput window under bursty completion delivery (decision 4). The window
+  assumes completions reach the client about as they finish on the server. When
+  they arrive in bursts, a burst at the window's start carries work done before the
+  window opened. To be decided before Milestone 3, as a recorded change.
 
 - Hardware profile block (GPU model, driver, CUDA, framework versions — recorded once,
   referenced thereafter). Until it exists, each results file records its own

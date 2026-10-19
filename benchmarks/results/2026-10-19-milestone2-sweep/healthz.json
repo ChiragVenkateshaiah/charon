@@ -1,0 +1,1 @@
+{"status":"ok","model_id":"Qwen/Qwen2.5-1.5B-Instruct","model_revision":"989aa7980e4cf806f80c7fef2b1adb7bc71aa306","device":"cuda:0","dtype":"torch.bfloat16","weights_vram_bytes":3087429632,"torch":"2.13.0+cu130","transformers":"5.16.1","cuda_available":true,"cuda_build":"13.0","gpu":"NVIDIA L4"}

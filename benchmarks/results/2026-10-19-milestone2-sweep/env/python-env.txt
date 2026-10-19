@@ -1,0 +1,4 @@
+python 3.14.8
+torch 2.13.0+cu130 cuda 13.0
+transformers 5.16.1
+cuda_available True NVIDIA L4
