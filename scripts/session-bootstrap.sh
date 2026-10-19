@@ -8,8 +8,9 @@
 #
 # What it does, in order:
 #   1. records the GPU environment (nvidia-smi) into <env-dir>
-#   2. installs uv if absent, then `uv sync --locked --group serving` — the
-#      exact torch/transformers builds pinned in uv.lock, nothing re-resolved
+#   2. installs uv if absent, then `uv sync --locked --group serving` on a
+#      pinned Python (CHARON_PYTHON, default 3.14.8) — the exact
+#      torch/transformers builds pinned in uv.lock, nothing re-resolved
 #   3. finds Nsight Systems; if absent, installs it from NVIDIA's CUDA apt repo
 #      (owner pre-approved installing nsys on the instance, 2026-10-06).
 #      Nsight Compute is only detected, never installed.
@@ -39,8 +40,12 @@ if ! command -v uv >/dev/null 2>&1 && [[ ! -x "${HOME}/.local/bin/uv" ]]; then
   curl -LsSf https://astral.sh/uv/install.sh | sh
 fi
 export PATH="${HOME}/.local/bin:${PATH}"
-log "uv sync --locked --group serving"
-uv sync --locked --group serving
+# Pin the interpreter: with no pin, uv takes the newest Python it can find, and
+# on 2026-10-19 that was 3.15, for which the locked torch 2.13.0 has no wheel.
+# 3.14.8 is the last recorded session environment (2026-10-06 profile session).
+PYTHON_VERSION="${CHARON_PYTHON:-3.14.8}"
+log "uv sync --locked --group serving --python ${PYTHON_VERSION}"
+uv sync --locked --group serving --python "${PYTHON_VERSION}"
 uv --version > "${ENV_DIR}/uv-version.txt"
 .venv/bin/python - > "${ENV_DIR}/python-env.txt" <<'EOF'
 import sys, torch, transformers

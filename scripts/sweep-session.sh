@@ -175,7 +175,9 @@ while (( $(date +%s) < JOB_DEADLINE )); do
     fetch_partial || log "WARNING: partial copy failed"
     NEXT_PARTIAL=$(( $(date +%s) + PARTIAL_EVERY_MIN * 60 ))
   fi
-  if ! OUTP="$(ssh_box 'cat ~/sweep/EXIT 2>/dev/null; echo ---; tail -n 1 ~/sweep/job.log; tail -n 1 ~/sweep/driver.log 2>/dev/null' 2>/dev/null)"; then
+  # `; true`: a missing driver.log (still bootstrapping) must not look like a
+  # failed poll, or EXIT is never read (2026-10-19). SSH failure still exits 255.
+  if ! OUTP="$(ssh_box 'cat ~/sweep/EXIT 2>/dev/null; echo ---; tail -n 1 ~/sweep/job.log; tail -n 1 ~/sweep/driver.log 2>/dev/null; true' 2>/dev/null)"; then
     instance_exists || { log "ERROR: instance gone during the job (preempted?) — keeping the last partial copy"; exit 1; }
     echo "  (poll failed; instance still exists — retrying)"; continue
   fi
