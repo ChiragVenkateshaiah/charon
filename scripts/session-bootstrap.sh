@@ -51,6 +51,14 @@ print("cuda_available", torch.cuda.is_available(), torch.cuda.get_device_name(0)
 EOF
 
 # ---- 3. Nsight Systems -------------------------------------------------------
+# CHARON_SKIP_NSYS=1 (set by sweep-session.sh): an unprofiled session needs no
+# profiler, so none is looked for or installed.
+if [[ "${CHARON_SKIP_NSYS:-0}" == 1 ]]; then
+  echo "skipped: CHARON_SKIP_NSYS=1 (unprofiled session)" > "${ENV_DIR}/nsys-provenance.txt"
+  log "bootstrap done (Nsight skipped)"
+  exit 0
+fi
+
 find_nsys() {
   command -v nsys 2>/dev/null && return 0
   local c

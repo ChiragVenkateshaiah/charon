@@ -46,6 +46,12 @@ planning figure (ESTIMATE), plus ~0.17 h per re-run at most. The
 "Unresolved questions" below were answered by those decisions; the list is
 kept as asked.
 
+**Update 2026-10-19.** Blocker 3 cleared: thread pool is 40 (F7). Blocker 4
+cleared: the owner approved 3.2 GPU-hours. The session is
+`scripts/sweep-session.sh` (unprofiled; instance lifetime capped at 192 min;
+[M5] re-runs start only if one can finish inside the cap). With the load
+estimated at ~2.77 h, re-runs are unlikely to fit (ESTIMATE).
+
 ---
 
 ## Findings
@@ -58,7 +64,7 @@ kept as asked.
 | F4 | Percentiles are nearest-rank. At n = 100, p99 is the second-largest sample. | VERIFIED (code + test) | `baseline_runner.py:183-189` |
 | F5 | The server serializes `model.generate` behind a process-wide `threading.Lock`. Tokenization and the chat template run outside the lock. | VERIFIED | `serving/naive_server.py:42`, `:159` |
 | F6 | `/generate` is a synchronous `def`, so FastAPI runs it in a worker thread pool. The Nsight trace shows decode on an `AnyIO worker th` thread. | VERIFIED | `naive_server.py:137-138`; `benchmarks/profiles/2026-10-06-week1-nsys/decode-investigation.md:46` |
-| F7 | The thread-pool size for anyio 4.14.2 / FastAPI 0.141.1 / uvicorn 0.52.4 is not known. No `.venv` exists locally to read the installed source. | UNRESOLVED | `uv.lock` (versions only) |
+| F7 | **Resolved 2026-10-19.** A sync `def` endpoint runs via `starlette.concurrency.run_in_threadpool` → `anyio.to_thread.run_sync` on the default `CapacityLimiter(40)`; its wait queue is FIFO. `naive_server.py` does not change it. So at c=64, at most 40 requests are in worker threads (1 in `_GEN_LOCK`, the rest waiting on the non-FIFO lock) and the other 24 wait in anyio's FIFO queue on the event loop. Confirmed by running a stand-in app (same structure, sleep instead of the model) under the locked stack: 32 handlers in flight at c=32, 40 at c=64. Client-side concurrency [M1] is unaffected; all queue time is in client latency. | VERIFIED (source + stand-in, not the real server) | locked packages in a scratchpad venv: `fastapi/routing.py`, `starlette/concurrency.py:32`, `anyio/_backends/_asyncio.py:3093` |
 | F8 | Server-side TTFT starts at `t0`, taken **inside** the lock. It excludes queue wait, HTTP and the chat template. `t0` is `perf_counter`, not wall time. | VERIFIED | `naive_server.py:163`, `:186` |
 | F9 | So server TTFT should stay near its concurrency-1 value at every level, and queueing shows only in client-side latency (`t_end − t_start`). The responses are not streamed, so client-side TTFT cannot be measured. | INFERENCE (supported by group B on a stub) | F8; test `test_queue_wait_shows_in_client_latency_not_server_time` |
 | F10 | Python's `threading.Lock` does not guarantee FIFO wake-up order. At concurrency above 1, which waiting request runs next is not defined. Client latency tails at high concurrency may reflect lock scheduling, not only queue depth. | INFERENCE (Python docs; not observed here) | `threading.Lock.acquire` documentation |
@@ -195,7 +201,7 @@ keep `itl_s`, and write host timestamps into the raw output.
 | TTFT p99 step (ADR-0003): explained or bounded | **Done — bounded** (see below) |
 | Groups A and B of the preflight tests pass | **Done** — 7 passed |
 | Group C passes against the real driver, zero skips | **Done (uncommitted)** — 19 passed |
-| Thread-pool size for the locked versions checked | **Open** (F7) |
+| Thread-pool size for the locked versions checked | **Done** — 40 threads, FIFO limiter (F7) |
 | `methodology.md` Week 2 decisions written | **Done (uncommitted)** — decisions [M1]–[M8] |
 | Timeout value chosen and justified | **Done** — 1800 s [M7] |
 | Dry run of the driver against a stub server, full 7-level schedule with short service time | **Done** — 2 ms stub, 2,688 requests received (= planned, no retries), 21 clean runs; not a result |
