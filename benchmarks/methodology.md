@@ -28,7 +28,8 @@ repo. These rules exist so the numbers mean something.
 
 ## Concurrency sweep (Milestone 2)
 
-Decided by the owner on 2026-10-18. Applies to the Milestone 2 sweep
+Decided by the owner on 2026-10-18; amended by the owner on 2026-10-19 (decision 6
+extended to throughput; decisions 9 and 10 added — see "Amendments" below). Applies to the Milestone 2 sweep
 (`docs/phase-1-plan.md`, Week 2; ADR-0003) and to every later sweep unless a change is
 recorded here. Background and findings: `docs/milestone-2-sweep-validation.md`.
 
@@ -71,7 +72,8 @@ per level. 128 output tokens (`min_tokens = max_tokens`). Prompt set
    depends on two events per run. Each level reports per-run p50/p95/p99, the spread
    of p50 and of p99 across runs, and a pooled p99 over the three runs' 300 measured
    requests. Rule 4's ~10% threshold is applied to p50 spread; p99 spread is reported,
-   not gated.
+   not gated. From 2026-10-19 the same threshold also applies to the spread of
+   requests/s and output tokens/s across runs.
 7. **Client timeout: 1800 s per request.** A client timeout does not stop the server's
    generation, and a closed loop would then send a new request, putting more than N
    requests on the server. The timeout is set high so that it is not expected to fire;
@@ -80,9 +82,28 @@ per level. 128 output tokens (`min_tokens = max_tokens`). Prompt set
    baseline, so concurrency is the only variable (rule 6). Alignment of requests with
    GPU samples uses the driver's wall-clock `t_start` / `t_end`.
 
+9. **Run order: rounds, with a shuffled level order per round.** The sweep runs in
+   rounds; each round runs every level once, so run k of every level is in round k.
+   The level order of each round is shuffled with a pseudo-random seed recorded in the
+   output (given with `--seed`, or chosen at start and recorded). Slow drift over the
+   session then shows up as spread across runs, not as an effect of concurrency.
+   Re-runs (decision 5) come after the last round.
+10. **Raw output format: compact JSON.** The results file is written as JSON without
+    indentation, to keep a sweep's committed raw output small (rule 7). The data is
+    the same as with indentation.
+
 **Raw output per request:** sequence number, warmup flag, ok / error, wall-clock
 `t_start` and `t_end`, and the server payload. GPU samples and the environment block
 (rule 5, including the Python version) are recorded each session.
+
+### Amendments
+
+- **2026-10-19 (owner).** Decision 6: throughput spread is gated at the same
+  threshold as p50 latency, because throughput defines the knee. Decision 9 added
+  (run order; before this, the order was not specified and the driver ran levels
+  ascending with runs consecutive). Decision 10 added (compact JSON; the Week 1 file
+  is indented JSON). No sweep has run under the 2026-10-18 text, so no result is
+  affected.
 
 ## Not yet decided
 

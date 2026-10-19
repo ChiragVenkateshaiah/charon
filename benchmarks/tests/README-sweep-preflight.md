@@ -33,7 +33,7 @@ missing, group C is skipped.
 With `benchmarks/sweep_driver.py` present (the state on 2026-10-18):
 
 ```
-Ran 26 tests in ~20s
+Ran 29 tests in ~20s
 
 OK
 ```
@@ -44,7 +44,7 @@ up <HTTPError 500 ...>` may print; it comes from
 `baseline_runner.post_generate`, which does not close the `HTTPError` it
 catches. It is not a test failure.
 
-Without the driver: `Ran 26 tests ... OK (skipped=19)`.
+Without the driver: `Ran 29 tests ... OK (skipped=22)`.
 
 ## What the tests cover
 
@@ -52,7 +52,7 @@ Without the driver: `Ran 26 tests ... OK (skipped=19)`.
 |---|---|---|---|
 | A. Existing code and evidence | 4 | yes | Nearest-rank p99 at n = 100 is the second-largest value. The committed Week 1 TTFT p99 values and the 18.08% spread reproduce from `raw.requests`. The existing runner raises on an HTTP 500 and on a timeout (it has no per-request failure handling). |
 | B. Queueing model on a fake serialized server | 3 | yes | With one lock around a fixed service time: wall time stays roughly constant from concurrency 1 to 16; queue wait shows in client latency, not in server-reported time; the server sees the requested concurrency. |
-| C. Sweep-driver contract | 19 | yes | Concurrency limit respected and reached; request accounting with no retries; timeouts and HTTP failures recorded, not fatal; warmup excluded from summaries; duplicate records, incomplete runs, exceeded concurrency and token mismatches detected by validation; `main` writes a complete report. Tests marked `[Mn]` check decision n of `benchmarks/methodology.md`, "Concurrency sweep (Milestone 2)": warmup max(20, N) by send order [M2], client latency includes queue wait [M3], throughput window [M4], re-run once / flag / time box [M5], p50-only spread gate and pooled p99 [M6]. |
+| C. Sweep-driver contract | 22 | yes | Concurrency limit respected and reached; request accounting with no retries; timeouts and HTTP failures recorded, not fatal; warmup excluded from summaries; duplicate records, incomplete runs, exceeded concurrency and token mismatches detected by validation; `main` writes a complete report. Tests marked `[Mn]` check decision n of `benchmarks/methodology.md`, "Concurrency sweep (Milestone 2)": warmup max(20, N) by send order [M2], client latency includes queue wait [M3], throughput window [M4], re-run once / flag / time box [M5], spread gate on p50 and throughput, not p99, and pooled p99 [M6], seeded shuffled rounds [M9], compact JSON output [M10]. |
 
 The interface is listed in the test module's docstring. The methodology is
 decided in `benchmarks/methodology.md`, not in these tests.

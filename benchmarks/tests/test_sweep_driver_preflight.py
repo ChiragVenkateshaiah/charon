@@ -25,7 +25,8 @@ Three groups (see benchmarks/tests/README-sweep-preflight.md):
                                      "requests_per_s", "output_tokens_per_s"}
          warmup_for(concurrency) -> int
          aggregate_level(attempts, spread_threshold) -> dict
-         run_sweep(url, prompts, *, levels, runs, requests, warmup_base, ...) -> list
+         run_sweep(url, prompts, *, levels, runs, requests, warmup_base, seed, ...) -> list
+         schedule(levels, runs, seed) -> list[list[int]]
          main(argv) -> int
 
      Tests marked [Mn] check decision n of benchmarks/methodology.md,
@@ -389,6 +390,38 @@ class SweepDriverContract(unittest.TestCase):
                               "requests_per_s": 1.0, "output_tokens_per_s": 128.0}
         self.assertEqual(DRIVER.aggregate_level(fake, 0.10)["warnings"], [], "p99 must not gate")
 
+    def test_m6_throughput_spread_gated(self):
+        lat = {k: {"p50": 1.0, "p95": 1.0, "p99": 1.0} for k in DRIVER.LATENCY_KEYS}
+        fake = [{"run": i, "attempt": 1, "problems": [],
+                 "summary": {**lat, "requests_per_s": v, "output_tokens_per_s": v * 128},
+                 "result": {"records": []}} for i, v in ((1, 1.0), (2, 1.0), (3, 1.2))]
+        warnings = DRIVER.aggregate_level(fake, 0.10)["warnings"]
+        self.assertTrue(any(w.startswith("requests_per_s spread") for w in warnings), warnings)
+        self.assertTrue(any(w.startswith("output_tokens_per_s spread") for w in warnings), warnings)
+
+    def test_m9_schedule_rounds_shuffled_and_seeded(self):
+        levels = (1, 2, 4, 8, 16, 32, 64)
+        rounds = DRIVER.schedule(levels, 3, seed=7)
+        self.assertEqual(len(rounds), 3)
+        for order in rounds:
+            self.assertEqual(sorted(order), list(levels))
+        self.assertEqual(rounds, DRIVER.schedule(levels, 3, seed=7))
+        self.assertNotEqual(
+            {tuple(o) for s in range(20) for o in DRIVER.schedule(levels, 3, seed=s)},
+            {levels}, "order never shuffled")
+
+    def test_m9_run_sweep_follows_schedule(self):
+        levels, seed = (1, 2, 4), 3
+        with FakeServer(service_s=0.002) as fs:
+            out = DRIVER.run_sweep(fs.url, self.PROMPTS, levels=levels, runs=3, requests=4,
+                                   warmup_base=2, output_tokens=128, timeout_s=5.0, seed=seed)
+        self.assertEqual([lv["concurrency"] for lv in out], list(levels))
+        executed = sorted(((a["started_at"], lv["concurrency"], a["run"])
+                           for lv in out for a in lv["attempts"]))
+        expected = [(n, k) for k, order in enumerate(DRIVER.schedule(levels, 3, seed), 1)
+                    for n in order]
+        self.assertEqual([(n, k) for _, n, k in executed], expected)
+
     def test_validate_flags_concurrency_exceeded_and_token_mismatch(self):
         with FakeServer(service_s=0.002) as fs:
             res = self.run_level(fs)
@@ -403,8 +436,10 @@ class SweepDriverContract(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, FakeServer(service_s=0.002) as fs:
             out = pathlib.Path(tmp) / "sweep.json"
             rc = DRIVER.main(["--url", fs.url, "--levels", "1,2", "--runs", "1",
-                              "--requests", "4", "--warmup-base", "2", "--out", str(out)])
-            report = json.loads(out.read_text())
+                              "--requests", "4", "--warmup-base", "2", "--seed", "11",
+                              "--out", str(out)])
+            text = out.read_text()
+            report = json.loads(text)
             self.assertFalse(out.with_suffix(".json.tmp").exists())
         self.assertEqual(rc, 0)
         self.assertEqual(report["schema"], "charon-sweep-v1")
@@ -412,6 +447,9 @@ class SweepDriverContract(unittest.TestCase):
         self.assertEqual([lv["concurrency"] for lv in report["levels"]], [1, 2])
         self.assertEqual(report["config"]["request_timeout_s"], 1800.0)
         self.assertIn("python", report["environment"]["client"])
+        self.assertNotIn("\n", text, "results file must be compact JSON [M10]")
+        self.assertEqual(report["config"]["seed"], 11)
+        self.assertEqual(report["config"]["schedule"], DRIVER.schedule((1, 2), 1, 11))
         for lv in report["levels"]:
             self.assertEqual(lv["attempts"][0]["problems"], [])
 

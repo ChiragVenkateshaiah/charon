@@ -238,6 +238,7 @@ The sweep's concurrency-1 level re-tests this as a control.
 | Group C vs broken mutant | same, with a copy that exceeds concurrency by 1, mislabels HTTP errors and skips duplicate detection | **Ran 7, FAILED 3** — exactly the three injected defects. Shows the tests can fail. |
 
 | Driver, full suite | `python3 -m unittest benchmarks/tests/test_sweep_driver_preflight.py` | **Ran 26, OK** (3 repeats). |
+| Driver after 2026-10-19 amendments ([M6] throughput gate, [M9], [M10]) | same | **Ran 29, OK.** Four more single-rule mutants (no shuffle, consecutive order, no throughput gate, indented output) **each FAILED**. Full 7-level dry run on the 2 ms stub: 2,688 requests received, seed and schedule recorded. |
 | Driver vs 6 mutants (scratchpad) | one decision broken per copy: warmup = 20 only, throughput window from first start, no re-run, gate on p99, seq taken outside the lock, server e2e as client latency | **Each FAILED** (1–2 failures each). |
 
 Not testable locally: real thread-pool limit, real lock fairness, real

@@ -14,6 +14,8 @@ methodology disagree, the methodology wins and this file is the bug.
   [M6] n = 100 per run, nearest-rank; spread gate on p50; p99 spread + pooled p99
   [M7] client timeout 1800 s
   [M8] server unchanged; GPU samples aligned on client wall-clock t_start/t_end
+  [M9] rounds: each round runs every level once, in a seeded shuffled order
+  [M10] results file written as compact JSON
 
 Reuses baseline_runner.py's GPU sampler, percentile, spread, /healthz and
 prompt loading, so Week 1 and Week 2 numbers share the same arithmetic.
@@ -39,6 +41,7 @@ import argparse
 import json
 import os
 import platform
+import random
 import socket
 import statistics
 import sys
@@ -271,10 +274,11 @@ def aggregate_level(attempts: list[dict], spread_threshold: float) -> dict:
                     "spread": br.spread(vals), "per_run": vals}
 
     warnings: list[str] = []
-    for key in LATENCY_KEYS:
-        s = out[key]["p50"]["spread"]
+    gated = [(f"{key} p50", out[key]["p50"]["spread"]) for key in LATENCY_KEYS]
+    gated += [(key, out[key]["spread"]) for key in THROUGHPUT_KEYS]  # [M6], 2026-10-19
+    for name, s in gated:
         if s is not None and s > spread_threshold:
-            warnings.append(f"{key} p50 spread {s:.1%} exceeds {spread_threshold:.0%} "
+            warnings.append(f"{name} spread {s:.1%} exceeds {spread_threshold:.0%} "
                             "(rule 4: something is uncontrolled)")
     flagged = [a["run"] for a in runs if a["problems"]]
     if flagged:
@@ -289,15 +293,28 @@ def aggregate_level(attempts: list[dict], spread_threshold: float) -> dict:
 # --------------------------------------------------------------------------- #
 # The sweep
 # --------------------------------------------------------------------------- #
+def schedule(levels: tuple[int, ...], runs: int, seed: int) -> list[list[int]]:
+    """[M9] One list per round: every level once, shuffled with `seed`."""
+    rng = random.Random(seed)
+    rounds = []
+    for _ in range(runs):
+        order = list(levels)
+        rng.shuffle(order)
+        rounds.append(order)
+    return rounds
+
+
 def run_sweep(url: str, prompts: list[str], *, levels: tuple[int, ...], runs: int,
               requests: int, warmup_base: int, output_tokens: int, timeout_s: float,
-              spread_threshold: float = 0.10, rerun_failed: bool = True,
+              seed: int = 0, spread_threshold: float = 0.10, rerun_failed: bool = True,
               deadline: float | None = None, on_progress=None) -> list[dict]:
-    """Levels ascending, runs consecutive within a level. Every attempt is kept.
-    After all levels, each run with problems is re-run once [M5], unless the
-    time box (`deadline`, time.monotonic()) has passed."""
+    """[M9] Rounds in schedule(levels, runs, seed) order; run k of every level
+    is in round k. Every attempt is kept. After the last round, each run with
+    problems is re-run once [M5], unless the time box (`deadline`,
+    time.monotonic()) has passed. Levels are returned in `levels` order."""
     out = [{"concurrency": n, "warmup": warmup_for(n, warmup_base), "attempts": [],
             "reruns_skipped": []} for n in levels]
+    by_n = {lv["concurrency"]: lv for lv in out}
 
     def attempt(level: dict, run: int, number: int) -> None:
         n, w = level["concurrency"], level["warmup"]
@@ -316,9 +333,9 @@ def run_sweep(url: str, prompts: list[str], *, levels: tuple[int, ...], runs: in
         if on_progress:
             on_progress(out)
 
-    for level in out:
-        for run in range(1, runs + 1):
-            attempt(level, run, 1)
+    for run, order in enumerate(schedule(levels, runs, seed), start=1):
+        for n in order:
+            attempt(by_n[n], run, 1)
 
     if rerun_failed:
         for level in out:
@@ -383,8 +400,10 @@ def build_report(args: argparse.Namespace, health: dict, levels: list[dict],
             "spread_threshold": args.spread_threshold,
             "rerun_failed": not args.no_rerun,
             "time_box_min": args.time_box_min,
+            "seed": args.seed,
+            "schedule": schedule(args.levels, args.runs, args.seed),
             "gpu_sample_interval_ms": args.gpu_sample_interval_ms,
-            "order": "levels ascending; runs consecutive within a level; re-runs after all levels",
+            "order": "rounds; level order shuffled per round with seed; re-runs after the last round",
         },
         "environment": _environment(health),
         "levels": levels,
@@ -396,7 +415,7 @@ def build_report(args: argparse.Namespace, health: dict, levels: list[dict],
 def write_report(path: Path, report: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(report, indent=2))
+    tmp.write_text(json.dumps(report, separators=(",", ":")))  # [M10]
     os.replace(tmp, path)
 
 
@@ -443,6 +462,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--no-rerun", action="store_true", help="disable the [M5] re-run")
     p.add_argument("--time-box-min", type=float, default=None,
                    help="minutes from start after which [M5] re-runs are skipped")
+    p.add_argument("--seed", type=int, default=None,
+                   help="seed for the per-round level order [M9] (default: chosen and recorded)")
     p.add_argument("--gpu-sample-interval-ms", type=int, default=200)
     p.add_argument("--out", type=Path, default=None,
                    help="output path (default: benchmarks/results/sweep-<ts>.json)")
@@ -450,6 +471,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args.levels = tuple(int(x) for x in args.levels.split(","))
     if any(n < 1 for n in args.levels):
         p.error("--levels must be positive integers")
+    if len(set(args.levels)) != len(args.levels):
+        p.error("--levels must not repeat")
+    if args.seed is None:
+        args.seed = random.SystemRandom().randrange(2**32)
     return args
 
 
@@ -478,7 +503,8 @@ def main(argv: list[str] | None = None) -> int:
     deadline = (time.monotonic() + args.time_box_min * 60) if args.time_box_min else None
     total = sum(args.runs * (warmup_for(n, args.warmup_base) + args.requests) for n in args.levels)
     print(f"server up: {health['model_id']} on {health['device']}. levels {list(args.levels)}, "
-          f"{args.runs} run(s) each, {total} requests before re-runs. output: {out_path}",
+          f"{args.runs} round(s), seed {args.seed}, {total} requests before re-runs. "
+          f"output: {out_path}",
           file=sys.stderr)
 
     sampler = br.GpuSampler(args.gpu_sample_interval_ms)
@@ -496,7 +522,8 @@ def main(argv: list[str] | None = None) -> int:
             args.url, prompts, levels=args.levels, runs=args.runs, requests=args.requests,
             warmup_base=args.warmup_base, output_tokens=args.output_tokens,
             timeout_s=args.request_timeout, spread_threshold=args.spread_threshold,
-            rerun_failed=not args.no_rerun, deadline=deadline, on_progress=checkpoint,
+            seed=args.seed, rerun_failed=not args.no_rerun, deadline=deadline,
+            on_progress=checkpoint,
         )
         complete = True
     except KeyboardInterrupt:
