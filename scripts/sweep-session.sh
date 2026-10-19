@@ -17,7 +17,8 @@
 # before creation. The on-box job is killed FETCH_MARGIN_MIN before that cap so
 # fetch and delete fit inside it. [M5] re-runs only start if one can still finish
 # (RERUN_WORST_MIN) before the job deadline. The driver rewrites its results
-# file after every run, so a deadline or preemption keeps all completed runs.
+# file after every run, and that file is copied to this machine every
+# PARTIAL_EVERY_MIN, so a preemption loses at most the runs since the last copy.
 #
 # Artifacts land in benchmarks/results/<UTC date>-milestone2-sweep/. Nothing is
 # committed.
@@ -56,34 +57,78 @@ JOB_DEADLINE=$(( HARD_END - FETCH_MARGIN_MIN * 60 ))
 RERUN_CUTOFF=$(( JOB_DEADLINE - RERUN_WORST_MIN * 60 ))
 
 ZONE=""; CREATED_AT=""; FETCHED=0
-ssh_box() { gcloud compute ssh "${INSTANCE_NAME}" --project="${PROJECT_ID}" --zone="${ZONE}" --quiet --command "$1"; }
+# Timeouts so a dead (e.g. preempted) host fails in ~1 min, not ~17 (2026-10-19).
+SSH_OPTS=(-oConnectTimeout=20 -oServerAliveInterval=15 -oServerAliveCountMax=4)
+ssh_box() {
+  gcloud compute ssh "${INSTANCE_NAME}" --project="${PROJECT_ID}" --zone="${ZONE}" --quiet \
+    "${SSH_OPTS[@]/#/--ssh-flag=}" --command "$1"
+}
+scp_box() {
+  gcloud compute scp "${SSH_OPTS[@]/#/--scp-flag=}" --project="${PROJECT_ID}" --zone="${ZONE}" --quiet "$@"
+}
+instance_exists() {
+  [[ -n "$(gcloud compute instances list --project="${PROJECT_ID}" \
+        --filter="name=${INSTANCE_NAME}" --format='value(name)' 2>/dev/null)" ]]
+}
 
 fetch() {
   [[ -n "${ZONE}" && "${FETCHED}" == 0 ]] || return 0
+  instance_exists || { log "instance no longer exists (preempted?) — nothing to fetch"; return 1; }
   log "fetching artifacts -> ${LOCAL_OUT#"${ROOT}"/}"
   mkdir -p "${LOCAL_OUT}"
   ssh_box 'tar czf ~/sweep.tgz -C ~ sweep' || true
-  gcloud compute scp "${INSTANCE_NAME}:~/sweep.tgz" "${LOCAL_OUT}/sweep.tgz" \
-    --project="${PROJECT_ID}" --zone="${ZONE}" --quiet || return 1
+  scp_box "${INSTANCE_NAME}:~/sweep.tgz" "${LOCAL_OUT}/sweep.tgz" || { rmdir "${LOCAL_OUT}" 2>/dev/null; return 1; }
   tar xzf "${LOCAL_OUT}/sweep.tgz" -C "${LOCAL_OUT}" --strip-components=1 && rm "${LOCAL_OUT}/sweep.tgz"
   FETCHED=1
+}
+
+# A preemption deletes the boot disk and the driver's results file with it, so
+# completed runs are copied off the box every PARTIAL_EVERY_MIN while the job runs.
+PARTIAL_EVERY_MIN="${CHARON_PARTIAL_EVERY_MIN:-10}"
+fetch_partial() {
+  instance_exists || return 1
+  mkdir -p "${LOCAL_OUT}"
+  # exit 1 = "file changed as we read it" (the driver may be mid-write): still usable
+  ssh_box 'tar czf ~/sweep-partial.tgz --exclude="*.tmp" -C ~ sweep; [ $? -le 1 ]' >/dev/null 2>&1 || return 1
+  scp_box "${INSTANCE_NAME}:~/sweep-partial.tgz" "${LOCAL_OUT}/partial.tgz.tmp" >/dev/null 2>&1 || return 1
+  mv "${LOCAL_OUT}/partial.tgz.tmp" "${LOCAL_OUT}/partial.tgz"
+  log "partial results copied ($(du -h "${LOCAL_OUT}/partial.tgz" | cut -f1))"
 }
 
 teardown() {
   local rc=$?
   trap - EXIT INT TERM
   if [[ -n "${ZONE}" ]]; then
-    fetch || log "WARNING: artifact fetch failed — deleting the instance anyway"
+    if fetch; then
+      rm -f "${LOCAL_OUT}/partial.tgz" "${LOCAL_OUT}/partial.tgz.tmp"
+    else
+      log "WARNING: artifact fetch failed — deleting the instance anyway"
+      rm -f "${LOCAL_OUT}/partial.tgz.tmp"
+      if [[ -f "${LOCAL_OUT}/partial.tgz" ]]; then
+        mkdir -p "${LOCAL_OUT}/partial" && tar xzf "${LOCAL_OUT}/partial.tgz" -C "${LOCAL_OUT}/partial" --strip-components=1 \
+          && rm "${LOCAL_OUT}/partial.tgz" && log "kept the last partial copy in ${LOCAL_OUT#"${ROOT}"/}/partial"
+      fi
+    fi
   fi
   log "teardown"
   bash scripts/session-end.sh || log "ERROR: session-end failed — check the console NOW"
   bash scripts/cost-check.sh || true
   if [[ -n "${CREATED_AT}" ]]; then
-    python3 - "${CREATED_AT}" <<'EOF'
+    # End of life = GCP's first preempt/delete operation after creation, so time
+    # spent waiting on a dead host is not counted (2026-10-19). Falls back to now.
+    local ended
+    ended="$(gcloud compute operations list --project="${PROJECT_ID}" \
+      --filter="targetLink~instances/${INSTANCE_NAME}\$ AND (operationType=compute.instances.preempted OR operationType=delete) AND insertTime>=${CREATED_AT}" \
+      --sort-by=insertTime --format='value(insertTime,operationType)' 2>/dev/null | head -n1 || true)"
+    python3 - "${CREATED_AT}" "${ended}" <<'EOF'
 import sys, datetime as dt
-t0 = dt.datetime.fromisoformat(sys.argv[1]); t1 = dt.datetime.now(dt.timezone.utc)
+utc = dt.timezone.utc
+t0 = dt.datetime.fromisoformat(sys.argv[1]).astimezone(utc)
+end = sys.argv[2].split()
+t1 = dt.datetime.fromisoformat(end[0]).astimezone(utc) if end else dt.datetime.now(utc)
+how = end[1] if end else "no delete/preempt operation found; measured to now"
 h = (t1 - t0).total_seconds() / 3600
-print(f"\ninstance lifetime: {h:.2f} h ({t0:%H:%M:%S} -> {t1:%H:%M:%S} UTC)")
+print(f"\ninstance lifetime: {h:.2f} h ({t0:%H:%M:%S} -> {t1:%H:%M:%S} UTC; end = {how})")
 print(f"ESTIMATED, NOT MEASURED cost: ~₹{h*69:.0f} at ₹69/h (observed effective rate); "
       f"~₹{h*41.9:.0f} at ₹41.9/h (spot list price, docs/gcp-setup.md)")
 EOF
@@ -103,6 +148,7 @@ log "instance up in ${ZONE} (created ${CREATED_AT}); hard end $(date -u -d "@${H
 
 for i in $(seq 1 30); do
   ssh_box true >/dev/null 2>&1 && break
+  instance_exists || { echo "ERROR: instance gone before SSH (preempted?)" >&2; exit 1; }
   [[ "${i}" == 30 ]] && { echo "ERROR: SSH not reachable after ~5 min" >&2; exit 1; }
   sleep 10
 done
@@ -113,7 +159,7 @@ TARBALL="$(mktemp --suffix=.tgz)"
 git ls-files -co --exclude-standard -z \
   | grep -zv -e '^Articles/' -e '^docs/articles/' -e '^benchmarks/results/' -e '^benchmarks/profiles/' \
   | tar --null -czf "${TARBALL}" -T -
-gcloud compute scp "${TARBALL}" "${INSTANCE_NAME}:~/charon.tgz" --project="${PROJECT_ID}" --zone="${ZONE}" --quiet
+scp_box "${TARBALL}" "${INSTANCE_NAME}:~/charon.tgz" || { rm -f "${TARBALL}"; echo "ERROR: repo copy failed" >&2; exit 1; }
 rm -f "${TARBALL}"
 ssh_box "rm -rf ~/charon ~/sweep && mkdir -p ~/charon ~/sweep && tar xzf ~/charon.tgz -C ~/charon && echo '${REV}' > ~/charon/.charon_git_rev && cp ~/charon/.charon_git_rev ~/sweep/git-rev.txt"
 
@@ -122,10 +168,17 @@ JOB="cd ~/charon && CHARON_SKIP_NSYS=1 bash scripts/session-bootstrap.sh ~/sweep
 ssh_box "setsid nohup bash -c '${JOB}; echo \$? > ~/sweep/EXIT' > ~/sweep/job.log 2>&1 < /dev/null &"
 log "on-box job started; job deadline $(date -u -d "@${JOB_DEADLINE}" +%H:%M:%S) UTC, re-runs only before $(date -u -d "@${RERUN_CUTOFF}" +%H:%M:%S) UTC; polling"
 
-STATUS=""
+STATUS=""; NEXT_PARTIAL=$(( $(date +%s) + PARTIAL_EVERY_MIN * 60 ))
 while (( $(date +%s) < JOB_DEADLINE )); do
   sleep 60
-  OUTP="$(ssh_box 'cat ~/sweep/EXIT 2>/dev/null; echo ---; tail -n 1 ~/sweep/job.log; tail -n 1 ~/sweep/driver.log 2>/dev/null' 2>/dev/null || true)"
+  if (( $(date +%s) >= NEXT_PARTIAL )); then
+    fetch_partial || log "WARNING: partial copy failed"
+    NEXT_PARTIAL=$(( $(date +%s) + PARTIAL_EVERY_MIN * 60 ))
+  fi
+  if ! OUTP="$(ssh_box 'cat ~/sweep/EXIT 2>/dev/null; echo ---; tail -n 1 ~/sweep/job.log; tail -n 1 ~/sweep/driver.log 2>/dev/null' 2>/dev/null)"; then
+    instance_exists || { log "ERROR: instance gone during the job (preempted?) — keeping the last partial copy"; exit 1; }
+    echo "  (poll failed; instance still exists — retrying)"; continue
+  fi
   STATUS="$(sed -n '1{/^---$/d;p}' <<<"${OUTP}")"
   echo "  $(sed '1,/^---$/d' <<<"${OUTP}" | tail -n 1)"
   [[ -n "${STATUS}" ]] && break
