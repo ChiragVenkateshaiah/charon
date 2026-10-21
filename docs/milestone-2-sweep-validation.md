@@ -52,6 +52,12 @@ cleared: the owner approved 3.2 GPU-hours. The session is
 [M5] re-runs start only if one can finish inside the cap). With the load
 estimated at ~2.77 h, re-runs are unlikely to fit (ESTIMATE).
 
+**Update 2026-10-21.** The sweep ran on 2026-10-19 (third GPU session; the
+first two failed before measuring, see the results file). 21 of 21 runs
+complete, no re-runs needed. Results:
+`benchmarks/results/2026-10-19-milestone2-sweep.md`. This file stays the
+pre-run validation record; its estimates above are not updated to match.
+
 ---
 
 ## Findings
