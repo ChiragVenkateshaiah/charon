@@ -18,53 +18,48 @@ Phase 1 started: 2026-08-27
 
 ## Now
 
-- **Phase / week:** Phase 1, Week 1 (naive baseline) — **deliverable done, still
-  not cleanly closed.** By the calendar this is ~Week 6; by exit conditions it is
-  Week 1. The first measured number is committed
-  (`benchmarks/results/baseline-20260828T172338Z.json`, analysis
-  `benchmarks/results/2026-08-28-week1-baseline.md`). What still keeps Week 1
-  open against `docs/phase-1-plan.md`:
-  1. **Methodology rule 4** — the TTFT p99 cross-run spread is unexplained. It is
-     in **run 2**, not run 1 as three docs say (see Open questions).
-  2. **The exit condition is an owner self-check** — "explain, *without notes*,
-     why a single-stream server underutilizes a GPU." There is now trace
-     evidence to explain it against:
-     `benchmarks/profiles/2026-10-06-week1-nsys/report.md`.
-  **Drift checkpoint overdue:** the last committed result in
-  `benchmarks/results/` is 2026-08-28 — ADR-0001's "a number every month" and
-  the plan's end-of-Week-2 checkpoint have both passed. The 2026-10-06 profile
-  is diagnostic (profiled, perturbed) and does **not** count as a result.
-- **In progress:** nothing half-done. All session work is committed and pushed.
+- **Phase / milestone:** Phase 1. **Milestone 2 (Week 2, load generation and
+  the latency/throughput curve) — complete, closed by the owner 2026-10-21.**
+  Evidence: `benchmarks/results/2026-10-19-milestone2-sweep.md` (states the
+  saturation concurrency and what limits it) and its raw output
+  `benchmarks/results/2026-10-19-milestone2-sweep/`; methodology
+  `benchmarks/methodology.md` "Concurrency sweep (Milestone 2)". The ADR-0003
+  Milestone 2 checkpoint (a committed concurrency curve exists) is met, and
+  ADR-0001's 30-day gate is cleared by this unprofiled result.
+  **Milestone 1 is still open, so it stays the current milestone** (ADR-0003
+  rule 4): methodology rule 4 (the Week 1 TTFT p99 spread, run 2; it recurs at
+  concurrency 1 in the sweep) and its written, owner-reviewed explanation
+  (ADR-0003 rule 2) are still owed.
+- **In progress:** Week 2 LinkedIn article package, `docs/articles/week-2/`
+  (untracked, like `docs/articles/week-1/`; not published).
 - **Next actions:**
-  - **Owner: fix (or not) the run-label prose** — "run 1" → "run 2" in
-    `benchmarks/results/2026-08-28-week1-baseline.md:35`,
-    `docs/week1-profile-card.md:37`, and the TTFT item below. Five minutes,
-    local. The raw JSON is correct and must not change.
-  - **Investigate the TTFT p99 spread** (rule 4): run 2's per-request TTFT in
-    `baseline-20260828T172338Z.json` (`raw.requests`) — warmup bleed, one-off
-    pause, or real — and record the call. Local, no GPU.
-  - **Owner: self-assess the Week 1 exit**, now against the roofline
-    (`docs/week1-roofline.md`) and the Nsight report; then mark Week 1 closed
-    or list what's still fuzzy.
-  - **Plan structure:** decide calendar weeks vs milestones advanced on exit
-    conditions. Probably an ADR. The rigor bar does not move.
-  - **Decide the next profiling step vs Week 2 first.** The report recommends a
-    CPU-sampling re-run of the same trace (needs owner approval to lower
-    `kernel.perf_event_paranoid` on the throwaway VM — CPU sampling was refused
-    this session), then Nsight Compute on the two GEMV kernels. The overdue
-    checkpoint argues for Week 2 first.
-  - Finalize `benchmarks/methodology.md` (Week 2 owns it): load-generator
-    choice, canonical prompt set with fixed input length, hardware profile
-    block (include the Python version — not recorded in Week 1), standard
-    concurrency-sweep levels.
-  - Week 2 measurement session: concurrency sweep 1 / 2 / 4 / 8 / 16 / 32 / 64
-    against the naive server → throughput-vs-concurrency curve and its knee.
-    `scripts/session-bootstrap.sh` now covers on-box setup; the sweep needs its
-    own driver modelled on `scripts/profile-session.sh`.
-  - Before publishing the Week 1 articles: confirm
+  - **Owner: review the Week 2 article package** —
+    `docs/articles/week-2/publishing-checklist.md`.
+  - **Owner: decide the decision-4 fix** (throughput window under bursty
+    completion delivery) — listed under "Not yet decided" in
+    `benchmarks/methodology.md`; to settle before Milestone 3.
+  - **Milestone 3 (batching) planning, owner decisions, probably an ADR:**
+    continuous-batching stack (vLLM or TGI; check docs for the installed
+    version), static-batching design, and the cross-configuration comparison
+    methodology ("Not yet decided" in `benchmarks/methodology.md`). Estimate
+    GPU-hours once the design is fixed.
+  - **Close Milestone 1:** investigate the TTFT p99 spread (local, raw JSON of
+    both results), then the written explanation for owner review.
+  - GPU session 2 (CPU-sampled Nsight trace, ADR-0003 rule 11) is now allowed;
+    `scripts/profile-session.sh` needs the same lifetime / ssh-timeout /
+    preemption fixes as `scripts/sweep-session.sh` (`35aa324`, `ef5e6cf`)
+    before it runs.
+  - Before publishing either article: confirm
     `github.com/ChiragVenkateshaiah/charon` is public; re-check the L4 spot
-    price on publish day.
+    price on publish day (carried).
 - **Open questions / blockers:**
+  - **c = 64 burst delivery** (new): completions reached the client in bursts
+    while more than 40 requests were in flight; mechanism not established
+    (`benchmarks/results/2026-10-19-milestone2-sweep.md` § 2).
+  - **Force-added result files** (new): the sweep's `env/` and `*.log` were
+    force-added in `fa6b7c2`, following the profile precedent (`c2a806e`);
+    `/end-day` says never force-add. Same open `.gitignore` decision as below,
+    now covering `benchmarks/results/` too.
   - **Run-label error** (new): Week 1's slow TTFT tail is run 2 in the raw
     JSON; the analysis, profile card and this file said run 1. Reported, not
     fixed — owner's call.
@@ -72,9 +67,9 @@ Phase 1 started: 2026-08-27
     generically, so the profile's environment records and logs were
     force-added in `c2a806e`. Decide: keep, or add negation rules for
     `benchmarks/profiles/` so future profiles don't need a force-add.
-  - **Python version drift** (new): the profiling instance resolved Python
-    3.14.8 via `uv sync --locked`; Week 1 didn't record its Python. Record it
-    from now on.
+  - **Python version drift:** now pinned — `scripts/session-bootstrap.sh`
+    syncs on Python 3.14.8 (`ef5e6cf`) and each session records it. Week 1's
+    Python is still unrecorded.
   - **₹69/h "observed effective rate"** (new, owner-supplied) vs the ~₹41.9/h
     spot list price in `docs/gcp-setup.md` — unreconciled; both kept, neither
     overwritten.
@@ -104,15 +99,75 @@ Phase 1 started: 2026-08-27
   checkbox can be ticked. Full detail in `docs/gcp-setup.md`.
 - **Budget:** flexible target ~₹1,000/month ≈ ~24 GPU-hours at current spot list
   price (~₹42/hr all-in, checked 2026-08-28 — `docs/gcp-setup.md`); extendable
-  if a measurement needs it. Spent this month (October): **~0.53h**
-  (hand-tracked; the Nsight profiling session). August: ~1.1h. September: 0.
-- **Last session:** 2026-10-06 (later) — interactive visualization of the
-  Nsight trace (`benchmarks/profiles/2026-10-06-week1-nsys/visualization.html`);
-  no GPU. Earlier the same day: roofline + the profiling GPU session.
+  if a measurement needs it. Spent this month (October): **~3.55h**
+  (hand-tracked: ~0.53h Nsight profile 2026-10-06; ~3.0h instance time over
+  three sweep GPU sessions 2026-10-19, 3.2h approved). August: ~1.1h.
+  September: 0.
+- **Last session:** 2026-10-21 — Milestone 2 closed; Week 2 article package
+  drafted. Previous: 2026-10-18/19 — methodology, sweep driver, the sweep GPU
+  session and its results.
 
 ## Sessions
 
 <!-- new entries here -->
+
+### 2026-10-18 to 2026-10-21 — Milestone 2: methodology, driver, sweep, close
+
+**Done — committed**
+- ADR-0003: milestones are authoritative; calendar weeks report only
+  (`e1c38dd`).
+- `benchmarks/methodology.md`: owner decisions 1–8 for the concurrency sweep
+  (`f0e69fb`); amended 2026-10-19 with decisions 9–10 and the throughput gate
+  (`a64e9cb`); amended again after the sweep with the c = 64 reporting rule and
+  the open decision-4 item (`fa6b7c2`).
+- `benchmarks/sweep_driver.py`, its fake-server preflight tests
+  (`benchmarks/tests/test_sweep_driver_preflight.py`) and the local validation
+  `docs/milestone-2-sweep-validation.md` (`3d328b7`, `a64e9cb`). A harness, not
+  a result.
+- GPU session scripts: `scripts/sweep-session.sh`, `scripts/run-sweep.sh`,
+  bootstrap Nsight skip (`c7cc319`); survive preemption, ssh timeouts, true
+  instance lifetime (`35aa324`); pin Python 3.14.8 (`ef5e6cf`).
+- The sweep result and write-up (`fa6b7c2`). Pushed to `origin/main`.
+
+- Status note in `docs/milestone-2-sweep-validation.md` (`66b9296`).
+
+**Done — not yet committed**
+- Week 2 article package `docs/articles/week-2/` (untracked, as Week 1's):
+  article, share post, claim verification, publishing checklist, three
+  figures and three GIFs generated from the committed sweep JSON by
+  `make_visuals.py`.
+
+**Tried, didn't work**
+- Sweep GPU session 1 (`us-central1-c`): spot preemption about a minute after
+  creation; the scp hung and the script over-reported the lifetime. Fixed in
+  `35aa324`.
+- Sweep GPU session 2 (`us-central1-c`): bootstrap failed — uv chose CPython
+  3.15, no torch 2.13.0 wheel; the poll hid the exit code. Fixed in `ef5e6cf`.
+- Session 3 ran in `us-central1-a` (`-c` stocked out).
+
+**Decisions**
+- Methodology decisions 1–10 and both amendments, all owner decisions,
+  recorded in `benchmarks/methodology.md`.
+- c = 64 throughput: report the decision-4 value marked as distorted, with the
+  whole-run figure beside it (owner, 2026-10-19). A change to decision 4 itself
+  is open.
+- Milestone 2 closed by the owner, 2026-10-21 (evidence paths in the Now
+  block).
+
+**Numbers committed**
+- `benchmarks/results/2026-10-19-milestone2-sweep.md`
+- `benchmarks/results/2026-10-19-milestone2-sweep/` (raw driver JSON, logs,
+  environment)
+
+**GPU**
+- Used this session: yes, three sweep GPU sessions on 2026-10-19. Approx
+  GPU-hours: ~3.0 instance-hours (hand-tracked; per-session lifetimes in the
+  results file, Methodology notes). Teardown verified by cost-check: yes — no
+  instances, no disks (re-checked 2026-10-19 after the push).
+
+**Left for next time**
+- See the Now block: article review, decision-4 fix, Milestone 3 planning,
+  Milestone 1 close-out, profile-session.sh fixes.
 
 ### 2026-10-06 (later) — trace visualization
 
