@@ -31,10 +31,14 @@ Phase 1 started: 2026-08-27
   concurrency 1 in the sweep) and its written, owner-reviewed explanation
   (ADR-0003 rule 2) are still owed.
 - **In progress:** Week 2 LinkedIn article package, `docs/articles/week-2/`
-  (untracked, like `docs/articles/week-1/`; not published).
+  (untracked, like `docs/articles/week-1/`; not published). The Result 2
+  latency table is now an image (`fig-d-latency-table.png`, Visual D),
+  because a pasted table did not render well in the LinkedIn editor.
+  Untracked means the other machine does not have either package.
 - **Next actions:**
   - **Owner: review the Week 2 article package** —
-    `docs/articles/week-2/publishing-checklist.md`.
+    `docs/articles/week-2/publishing-checklist.md` (now includes uploading
+    Visual D at its marker in Result 2).
   - **Owner: decide the decision-4 fix** (throughput window under bursty
     completion delivery) — listed under "Not yet decided" in
     `benchmarks/methodology.md`; to settle before Milestone 3.
@@ -103,13 +107,44 @@ Phase 1 started: 2026-08-27
   (hand-tracked: ~0.53h Nsight profile 2026-10-06; ~3.0h instance time over
   three sweep GPU sessions 2026-10-19, 3.2h approved). August: ~1.1h.
   September: 0.
-- **Last session:** 2026-10-21 — Milestone 2 closed; Week 2 article package
-  drafted. Previous: 2026-10-18/19 — methodology, sweep driver, the sweep GPU
-  session and its results.
+- **Last session:** 2026-10-22 — Week 2 article: Result 2 table replaced by an
+  image (untracked); no GPU. Previous: 2026-10-21 — Milestone 2 closed; Week 2
+  article package drafted.
 
 ## Sessions
 
 <!-- new entries here -->
+
+### 2026-10-22
+
+**Done — committed**
+- None, apart from this worklog entry.
+
+**Done — not yet committed**
+- `docs/articles/week-2/`: the Result 2 table in `the-knee-was-at-one.md` is
+  replaced by a placeholder for a new image, `fig-d-latency-table.png` (+ SVG),
+  drawn by a new `latency_table()` in `make_visuals.py` from the committed
+  sweep JSON (same values as the old table). `README.md` (placement, caption,
+  alt text, provenance), `publishing-checklist.md` and `claim-verification.md`
+  updated to match. Left untracked by owner choice, like `docs/articles/week-1/`.
+
+**Discussed, not started**
+- Next steps after Milestone 2 (decision-4 fix, closing Milestone 1, Milestone 3
+  planning): set out in chat, nothing started. Already in the Now block.
+
+**Decisions**
+- Owner: keep `docs/articles/` untracked at this `/end-day`.
+
+**Numbers committed**
+- none
+
+**GPU**
+- Used this session: no. Approx GPU-hours: 0 (owner-confirmed).
+  Teardown verified by cost-check: yes (no instances, no disks).
+
+**Left for next time**
+- Owner review of the Week 2 article package; then the Now block's next actions,
+  starting with the decision-4 fix.
 
 ### 2026-10-18 to 2026-10-21 — Milestone 2: methodology, driver, sweep, close
 
