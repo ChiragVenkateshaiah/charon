@@ -202,12 +202,12 @@ successful output tokens (see "Project Goal and Primary Success Metric").
   see [`docs/gcp-setup.md`](docs/gcp-setup.md)).
 - **Single cloud:** Google Cloud, deliberately, even though other projects here run on
   AWS. The reasoning is recorded as an ADR rather than left implicit.
-- **GPU-on discipline:** the GPU is for learning and measurement sessions
-  ([ADR-0005](adr/0005-gpu-sessions-for-learning-and-measurement.md)). Every session
-  has a stated goal, a time box and a GPU-hour estimate. Instances are created and
+- **GPU-on discipline:** the GPU is for any work that serves the cost goal —
+  measurement, investigation, debugging
+  ([ADR-0005](adr/0005-gpu-sessions-serve-the-cost-goal.md)). Every session states
+  its cost question, a time box and a GPU-hour estimate. Instances are created and
   deleted per session — never left stopped, since the 100 GB boot disk alone bills
-  hundreds of ₹/month for a box doing nothing. Exploration runs are not results, and
-  session spend is not serving cost.
+  hundreds of ₹/month for a box doing nothing. Investigation runs are not results.
 
 See [`CLAUDE.md`](CLAUDE.md) for the working agreement on AI-assisted work in this repo,
 and [`adr/`](adr/) for the decision log.

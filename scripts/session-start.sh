@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# session-start.sh — bring up the Charon GPU instance for one learning or
-# measurement session (adr/0005).
+# session-start.sh — bring up the Charon GPU instance for one session that
+# serves the cost goal: measurement, investigation or debugging (adr/0005).
 #
 # WHY THIS SCRIPT EXISTS (read before changing it):
 # The project runs on a flexible ~1,000 INR/month target (~24 GPU-hours at GCP

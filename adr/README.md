@@ -9,8 +9,9 @@ Decision log for the AI Infrastructure / MLOps platform.
   the old one `Superseded by ADR-NNNN`. Do not edit history.
   - **One recorded exception (2026-10-23):** the owner authorized direct edits to
     ADR-0001, ADR-0002 and ADR-0003 so that they match ADR-0004 (sole primary goal).
-    Each edited ADR has a `Revised: 2026-10-23` line naming what changed. The rule
-    above still applies to every other change.
+    Each edited ADR has a `Revised: 2026-10-23` line naming what changed. On the same
+    day the owner also authorized an in-place rewrite of ADR-0005, recorded in its
+    own `Revised` line. The rule above still applies to every other change.
 - Every ADR is judged against Charon's sole primary goal, cost per 1M successful output
   tokens ([ADR-0004](0004-cost-per-1m-successful-output-tokens-is-the-sole-primary-goal.md)).
   An ADR that touches performance or capacity states how it is expected to affect that
@@ -73,4 +74,4 @@ directory:
 | [0002](0002-single-cloud-gcp.md) | Charon runs single-cloud on Google Cloud | Accepted |
 | [0003](0003-milestones-are-authoritative.md) | Milestones are authoritative; calendar weeks are reporting periods only | Accepted |
 | [0004](0004-cost-per-1m-successful-output-tokens-is-the-sole-primary-goal.md) | Cost per 1M successful output tokens is Charon's sole primary goal | Accepted |
-| [0005](0005-gpu-sessions-for-learning-and-measurement.md) | GPU sessions are for learning and measurement, under the same session discipline | Accepted |
+| [0005](0005-gpu-sessions-serve-the-cost-goal.md) | GPU sessions serve the cost goal, under one session discipline | Accepted |
