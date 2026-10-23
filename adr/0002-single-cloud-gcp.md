@@ -4,7 +4,10 @@
 - **Date:** 2026-08-26
 - **Phase:** All
 - **Deciders:** Chirag
-- **Supersedes / Related:** None
+- **Revised:** 2026-10-23 — one-time, owner-authorized edit of this accepted ADR to
+  align it with ADR-0004 (sole primary goal). Added: the "Relation to the primary
+  goal" paragraph under Decision. The decision is unchanged.
+- **Supersedes / Related:** ADR-0004
 
 ---
 
@@ -44,6 +47,12 @@ platform layer (GKE) live on GCP. No AWS resources are provisioned for Charon.
 
 This is a project-scoped decision, not an organizational one. The rest of the active
 portfolio (Cerberus, novapay-sre) stays on AWS.
+
+**Relation to the primary goal (ADR-0004).** The cloud provider is an implementation
+choice, not a goal. Charon's primary metric, cost per 1M successful output tokens, is
+measured on GCP hardware at GCP prices, so every cost figure in this project is
+GCP-specific. This ADR does not claim GCP minimizes that metric. Instance type, spot vs
+on-demand, and region choices within GCP are judged by their measured effect on it.
 
 ---
 

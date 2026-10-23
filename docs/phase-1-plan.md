@@ -5,9 +5,16 @@
 **Exit condition:** a committed benchmark table covering at least six serving
 configurations, with methodology notes good enough that someone else could reproduce it
 
-The goal of this phase is **not** to build a platform. It is to develop physical
-intuition for what happens between a request arriving and a token coming back, and to
-learn to measure it honestly. Everything in Phase 3 depends on this being real.
+Charon's sole primary goal is to minimize cost per 1M successful output tokens
+(`adr/0004-cost-per-1m-successful-output-tokens-is-the-sole-primary-goal.md`). This
+phase serves that goal by finding out what drives cost on one GPU: every
+configuration below is a lever on cost, and every latency, throughput, memory, or
+utilization number is a constraint or a diagnostic for it, not a goal of its own.
+
+This phase is **not** about building a platform. It develops physical intuition for
+what happens between a request arriving and a token coming back, and learns to measure
+it honestly — because cost per token cannot be lowered deliberately without that.
+Everything in Phase 3 depends on this being real.
 
 ---
 
@@ -205,14 +212,17 @@ the difference between someone who ran a benchmark and someone who understands o
 
 **Build.** No new serving work. A script that converts benchmark output into money.
 
-**Measure.** Cost per 1M output tokens for every configuration measured so far, on:
+**Measure.** Cost per 1M successful output tokens (ADR-0004), using the accounting
+method recorded in `benchmarks/methodology.md`, for every configuration measured so
+far, on:
 `g2-standard-4` on-demand, `g2-standard-4` spot, and one larger GCP instance for
 comparison. Include idle cost — a GPU at 20% utilization is paid for at 100%.
 
 **Expect.** The ranking by cost differs from the ranking by latency. This is the tension
 the whole platform exists to manage, and it's the framing that reads as senior.
 
-**Number produced:** cost-per-1M-tokens column added to every row of the master table.
+**Number produced:** cost-per-1M-successful-output-tokens column added to every row of
+the master table.
 
 **Exit:** you can answer "how would you cut our inference cost 40%?" with a specific
 answer and the measurement that supports it.
@@ -246,6 +256,9 @@ Per ADR-0001, a number must land every month. In this phase the cadence is weekl
   measure.
 - **End of Week 6** — if the second model scale hasn't been run, cut Week 7 rather than
   skipping it.
+  *Open (2026-10-23):* Week 7 is the cost model, which ADR-0004 makes the primary
+  goal. Whether this rule still holds is an owner decision; until it is made, the rule
+  stands as written here and in ADR-0003 rule 6.
 
 The failure mode to watch for: spending Week 3 reading about batching strategies instead
 of measuring two of them. The reading is only useful attached to a number you produced.

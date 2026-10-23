@@ -39,24 +39,37 @@ Cost per 1M successful output tokens = (Total serving cost / Total successful ge
 None of these is defined yet (see "Open definitions" below). Until they are, no
 figure in this repo is the primary metric — at most an estimate of it.
 
-**Everything else is diagnostic or a constraint, not a goal.** Throughput, time to
-first token (TTFT), time per output token (TPOT), p50/p99 latency, GPU utilization,
-memory use, kernel activity, and CPU overhead are diagnostic or constraint metrics.
-They are worth optimizing when evidence shows that doing so can reduce cost per 1M
-successful output tokens without violating latency, reliability, or quality
-requirements. Higher throughput is not automatically success; it matters when it
-improves cost efficiency under the project's service constraints.
+**The hierarchy** — recorded in
+[`adr/0004`](adr/0004-cost-per-1m-successful-output-tokens-is-the-sole-primary-goal.md)
+and kept the same across every document in this repo:
 
-**Tools are experiments, not goals.** Profiling, concurrency sweeps, serving-framework
-changes (including vLLM), and the later Kubernetes work are experiments or
-implementation choices. Each is pursued only when it tests a cost-relevant hypothesis
-or enables a necessary service constraint. Every experiment should answer:
+| Level | What | Role |
+|---|---|---|
+| **Primary goal** | Cost per 1M successful output tokens | The only measure of project success. |
+| **Mandatory service constraints** | Latency, reliability, output quality | Must stay within defined acceptable limits. Actively optimized where evidence shows it is valuable, but not competing primary goals. |
+| **Optimization dimensions** | Latency, reliability, output quality, throughput, resource efficiency | Improved where that lowers cost or enables more cost-efficient serving. |
+| **Diagnostic metrics** | GPU utilization, memory use, kernel activity, CPU overhead, queueing (and TTFT/TPOT breakdowns) | Explain why serving costs what it does and where a change may lower it. |
+| **Implementation choices** | Profiling tools, concurrency strategies, vLLM, Kubernetes, other technologies | Means to the objective, never goals in themselves. |
 
-1. What factor may be increasing cost per 1M successful output tokens?
-2. What evidence supports that hypothesis?
-3. What controlled measurement will test it?
-4. Did the measured cost metric improve, and were latency, reliability, and output
-   quality preserved?
+**Decision rule for every optimization:**
+
+1. Measure the current cost per 1M successful output tokens using a consistent
+   accounting method.
+2. Identify a cost-relevant limitation using evidence.
+3. Form a hypothesis explaining how changing that limitation could reduce cost.
+4. Run a controlled experiment and measure the resulting cost metric.
+5. Check the effects on latency, reliability, output quality, and relevant operational
+   constraints.
+6. Accept the change as an improvement only if it produces a credible cost benefit
+   without violating required service constraints. If cost does not improve, do not
+   claim success because another metric improved.
+
+**What is not success.** A better latency, throughput, or utilization figure on its
+own. It counts when it demonstrably reduces cost, enables lower-cost serving, or is
+needed to meet a service constraint. Equally, a lower apparent cost bought with
+excessive failures, unacceptable latency, or degraded output quality is not success.
+When a change improves quality or reliability but raises cost, the trade-off is
+reported openly; cost regressions are never hidden behind secondary metrics.
 
 ### Current cost estimates — not a baseline
 
@@ -77,6 +90,10 @@ optimization in this repo has been shown to reduce cost; that claim needs compar
 before-and-after evidence.
 
 ### Open definitions (owner decisions)
+
+ADR-0004 requires these to be recorded in
+[`benchmarks/methodology.md`](benchmarks/methodology.md) before any cost figure is
+compared across configurations:
 
 - Cost-accounting scope: GPU-hours only, or the whole session (boot, model download,
   teardown, boot disk)?

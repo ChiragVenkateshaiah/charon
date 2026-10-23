@@ -37,9 +37,13 @@ Be specific enough that someone could implement it without asking a follow-up qu
 > Required for any decision touching performance, cost, or capacity.
 > If this section is empty, the decision is a **hypothesis**, and Status must
 > remain `Proposed`. See ADR-0001.
+>
+> The primary column is cost per 1M successful output tokens (ADR-0004). Latency and
+> failures are service constraints; throughput and GPU util are diagnostics. If cost
+> got worse while another column improved, say so in Notes.
 
-| Variant | Throughput (req/s) | p50 (ms) | p99 (ms) | GPU util % | Cost / 1k inferences | Notes |
-|---------|--------------------|----------|----------|------------|----------------------|-------|
+| Variant | Cost / 1M successful output tokens | Throughput (req/s) | p50 (ms) | p99 (ms) | Failed requests | GPU util % | Notes |
+|---------|------------------------------------|--------------------|----------|----------|-----------------|------------|-------|
 | baseline |                   |          |          |            |                      |       |
 | candidate |                  |          |          |            |                      |       |
 

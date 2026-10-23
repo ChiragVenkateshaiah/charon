@@ -124,3 +124,11 @@ per level. 128 output tokens (`min_tokens = max_tokens`). Prompt set
   referenced thereafter). Until it exists, each results file records its own
   environment (rule 5).
 - Methodology for comparisons across serving configurations (Milestone 3 onward).
+- Cost accounting for the primary metric, cost per 1M successful output tokens
+  (ADR-0004). Required before any cost figure is compared across configurations:
+  the cost scope (GPU time only, or whole session including boot, model download,
+  teardown and boot disk); the hourly-rate source (the ~₹41.9/h list price and the
+  ₹69/h owner-supplied observed rate are unreconciled); what makes a request
+  successful, and the latency, reliability and quality limits; how output tokens are
+  counted; and how failed requests and idle time are treated. Added 2026-10-23 as an
+  open item only; no existing rule changed.

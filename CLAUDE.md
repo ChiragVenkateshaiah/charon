@@ -5,6 +5,27 @@ It exists because the failure modes of AI-assisted infrastructure work are speci
 predictable, and this document is how they get headed off in advance rather than argued
 about mid-task.
 
+## The goal
+
+Charon has **one primary goal: minimize cost per 1M successful generated output
+tokens** (`adr/0004-cost-per-1m-successful-output-tokens-is-the-sole-primary-goal.md`).
+Latency, reliability, and output quality are mandatory service constraints that are
+also actively optimized. Throughput, GPU utilization, memory, kernel activity, CPU
+overhead, and queueing are diagnostics and levers. Profiling tools, vLLM, Kubernetes,
+and other technologies are implementation choices, never goals.
+
+What this means for AI assistance:
+
+- Tie every proposed experiment to a cost hypothesis: what may be raising cost, what
+  evidence supports that, what controlled measurement tests it, and how cost and the
+  service constraints came out.
+- Never report a throughput, latency, or utilization improvement as project success on
+  its own. Say what it did to cost per 1M successful output tokens, or that cost was
+  not measured.
+- Report cost regressions and trade-offs openly, next to any secondary metric that
+  improved.
+- Keep this hierarchy the same in every document written in this repo.
+
 ## Who decides what
 
 **Architecture decisions are mine. Implementation is delegable.**

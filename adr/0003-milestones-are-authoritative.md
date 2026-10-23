@@ -8,9 +8,14 @@
   the measurement gate and its order, separate GPU sessions, the TTFT time box, the
   configuration definition, the Phase 1 target and the Milestone 1 explanation
   path). Where this ADR states the project's position "now", it means 2026-10-18.
+- **Revised:** 2026-10-23 — one-time, owner-authorized edit of this accepted ADR to
+  align it with ADR-0004 (sole primary goal). Added: the last sentence of rule 9. The
+  decision is unchanged. Open for the owner: whether rule 6's "cut Milestone 7" still
+  holds, since Milestone 7 is the cost model.
 - **Phase:** All
 - **Deciders:** Chirag
-- **Supersedes / Related:** ADR-0001 (measurement discipline; unchanged by this ADR)
+- **Supersedes / Related:** ADR-0001 (measurement discipline; unchanged by this ADR),
+  ADR-0004 (sole primary goal)
 
 ---
 
@@ -131,7 +136,9 @@ weeks are **reporting periods** only.
    configurations; they are how one configuration is measured. Which six
    setups Phase 1 will measure is **not** decided by this ADR. The plan's week
    sections suggest candidates, but they are not an approved implementation
-   list. Each one is chosen when its milestone is planned.
+   list. Each one is chosen when its milestone is planned, under ADR-0004's
+   decision rule: it must test a cost-relevant hypothesis or enable a required
+   service constraint.
 10. **ADR numbering is preserved.** ADR-0001, ADR-0002 and this ADR keep their
     numbers. The future ADRs that `docs/phase-1-plan.md` (Week 8) names as
     "ADR-0002", "ADR-0003" and "ADR-0004" take the next free number when each

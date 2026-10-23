@@ -4,10 +4,19 @@
 - **Date:** 2026-08-23
 - **Phase:** All
 - **Deciders:** Chirag
+- **Revised:** 2026-10-23 — one-time, owner-authorized edit of this accepted ADR to
+  align it with ADR-0004 (sole primary goal). Changed: the objective paragraph in
+  Context; Phase 3's cost metric; the paragraph after the phase table; the first
+  Non-goal. The measurement rule and the drift check are unchanged.
+- **Supersedes / Related:** ADR-0004
 
 ---
 
 ## Context
+
+Charon's sole primary objective is to minimize the cost per 1 million successful
+generated output tokens (ADR-0004). This ADR governs how progress toward it is proven:
+by measured numbers, not by activity.
 
 This project exists to build employable AI infrastructure skill, not to accumulate
 knowledge about AI infrastructure. Those two goals look identical from the inside and
@@ -36,11 +45,18 @@ Qualifying numbers, by phase:
 |-------|-----------------|
 | 1 — Inference mechanics | Throughput and p50/p99 latency across at least three serving configurations |
 | 2 — Compilation & hardware | Before/after figures for a compiled variant, plus the profiler evidence explaining *why* it changed |
-| 3 — Platform | Time-to-deploy, time-to-rollback, and cost per 1000 inferences |
+| 3 — Platform | Time-to-deploy, time-to-rollback, and cost per 1M successful output tokens |
 | 4 — Scale & reliability | Behaviour under spot interruption and under load beyond capacity |
 
 A number qualifies only if it was produced on real hardware by a reproducible run whose
 raw output is committed to the repo.
+
+The numbers above are evidence for the primary metric, not goals of their own:
+throughput and latency are inputs and constraints, and profiler evidence explains cost.
+Once the cost-accounting method that ADR-0004 requires is recorded in
+`benchmarks/methodology.md`, every phase also reports cost per 1M successful output
+tokens for each configuration it measures. Until then, any cost figure is labeled as an
+estimate.
 
 ---
 
@@ -78,7 +94,8 @@ prevent, so treat any argument for suspending the gate as evidence the gate is w
 ## Non-goals
 
 - Not a demand for *impressive* numbers. A change that made things 15% worse, understood
-  and explained, is a valid deliverable.
+  and explained, is a valid deliverable. It is reported as a regression, not as a
+  success (ADR-0004).
 - Not a ban on reading or learning. It is a constraint on what counts as phase
   completion.
 - Not benchmarking rigour at publication standard. Internal consistency and honest
