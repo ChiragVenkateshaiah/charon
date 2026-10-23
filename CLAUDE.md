@@ -74,23 +74,31 @@ an API surface from a stale mental model.
 
 **Target budget: ~₹1,000/month, flexible.** At current spot list price (~₹42/hour
 all-in for a `g2-standard-4` + L4 in `us-central1`, checked 2026-08-28 — see
-`docs/gcp-setup.md`) that is ~24 GPU-hours. The budget can be extended when a
-specific measurement needs it; it is a target to plan against, not a wall.
+`docs/gcp-setup.md`) that is ~24 GPU-hours. Learning sessions are planned inside it;
+it can be extended when a specific measurement needs it. It is a target to plan
+against, not a wall.
 
-The **discipline** is not flexible. Any suggestion that involves a running GPU
-instance must account for it explicitly:
+The GPU is for **learning and measurement** (`adr/0005-gpu-sessions-for-learning-and-measurement.md`).
+Charon is a learning playground on the real GPU, in pursuit of the cost metric. The
+**discipline** is not flexible. Any suggestion that involves a running GPU instance
+must follow these rules:
 
-- The GPU is powered on only while a measurement is actively running. Development,
-  debugging, analysis, and writing happen locally on CPU — don't suggest spinning up the
-  instance for anything that doesn't need the GPU.
-- Instances are created and deleted per session via `scripts/session-start.sh` /
-  `scripts/session-end.sh`, never left stopped — the 100 GB boot disk alone bills
-  ~₹400–950/month (depending on disk type) for a box doing nothing.
-- Before proposing a benchmark run, estimate its GPU-hours (and so its rough cost) and
-  say so. Sessions should be scoped and time-boxed, not open-ended "let's try a few
-  things while it's up."
-- If asked to help debug something GPU-related, prefer reasoning from logs, code, and
-  prior committed results over "spin it up and see."
+- **Delete after every session.** Instances are created and deleted per session via
+  `scripts/session-start.sh` / `scripts/session-end.sh`, never left stopped — the
+  100 GB boot disk alone bills ~₹400–950/month (depending on disk type) for a box
+  doing nothing.
+- **Goal, time box, and GPU-hour estimate before every session.** State what the
+  session will teach or measure, how long it runs, and its rough cost. Check the
+  month's GPU-hours so far (worklog) first. Not open-ended "let's try a few things
+  while it's up."
+- **Exploration is not a result.** A learning-session run is not a benchmark result.
+  Only runs that follow `benchmarks/methodology.md` and commit raw output go into
+  `benchmarks/results/`. Label any exploratory number as exploratory.
+- **Learning spend is not serving cost.** Session spend never enters the numerator of
+  cost per 1M successful output tokens.
+- Writing, code editing, and analysis of committed output still happen locally — the
+  GPU session is for work that needs the GPU. Debugging on the GPU is fine inside a
+  planned session with a goal.
 
 ## Conventions
 

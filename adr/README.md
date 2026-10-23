@@ -73,3 +73,4 @@ directory:
 | [0002](0002-single-cloud-gcp.md) | Charon runs single-cloud on Google Cloud | Accepted |
 | [0003](0003-milestones-are-authoritative.md) | Milestones are authoritative; calendar weeks are reporting periods only | Accepted |
 | [0004](0004-cost-per-1m-successful-output-tokens-is-the-sole-primary-goal.md) | Cost per 1M successful output tokens is Charon's sole primary goal | Accepted |
+| [0005](0005-gpu-sessions-for-learning-and-measurement.md) | GPU sessions are for learning and measurement, under the same session discipline | Accepted |

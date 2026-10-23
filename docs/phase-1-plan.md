@@ -1,7 +1,8 @@
 # Phase 1 — Inference Mechanics
 
 **Duration:** 8 weeks
-**Location:** local CPU primarily; GCP spot GPU only for measurements that need one
+**Location:** GCP spot GPU for learning and measurement sessions (ADR-0005); writing,
+code and analysis of committed output locally
 **Exit condition:** a committed benchmark table covering at least six serving
 configurations, with methodology notes good enough that someone else could reproduce it
 
@@ -29,9 +30,10 @@ small-model weeks with quantization.
 | Local GPU 8–12 GB | Weeks 1–5 local at small model size; Week 6 on `g2-standard-4` spot |
 | No local GPU | All weeks on `g2-standard-4` spot, batched into 3–4 hour sessions |
 
-Charon's actual situation is the last row: no local GPU. All development, debugging,
-and analysis happens locally on CPU; the GPU is a GCP `g2-standard-4` (1× NVIDIA L4,
-24 GB VRAM) spot instance, powered on only for the duration of a measurement. See the
+Charon's actual situation is the last row: no local GPU. The GPU is a GCP
+`g2-standard-4` (1× NVIDIA L4, 24 GB VRAM) spot instance, created for a learning or
+measurement session with a stated goal and time box, and deleted at its end
+(ADR-0005). Writing, code and analysis of committed output happen locally. See the
 Constraints section of the root `README.md` and `CLAUDE.md` for the budget this
 enforces.
 

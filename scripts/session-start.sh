@@ -1,19 +1,21 @@
 #!/usr/bin/env bash
 #
-# session-start.sh — bring up the Charon GPU instance for one measurement session.
+# session-start.sh — bring up the Charon GPU instance for one learning or
+# measurement session (adr/0005).
 #
 # WHY THIS SCRIPT EXISTS (read before changing it):
 # The project runs on a flexible ~1,000 INR/month target (~24 GPU-hours at GCP
 # spot list price; see docs/gcp-setup.md). Flexible on the number, not on the
-# habit: the GPU is on for the duration of a measurement and nothing more.
+# habit: the GPU is on for one session with a stated goal and time box, and
+# nothing more.
 # Spot + --instance-termination-action=DELETE means a preemption deletes the
 # instance outright instead of leaving it (or its disk) stopped and still billing.
 # This is not a style choice: the 100 GB boot disk left behind after a stopped
 # instance bills hundreds of INR/month on its own for nothing.
 #
 # This script does not run any serving/benchmark code. It only provisions the box.
-# All development, debugging, and analysis happens locally on CPU, before and after
-# this script runs — never while deciding what to run next.
+# Decide the session's goal, time box and GPU-hour estimate before running it —
+# never while the box is up deciding what to run next.
 
 set -euo pipefail
 
